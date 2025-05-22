@@ -524,10 +524,9 @@ const AttendanceManagement = () => {
                   onChange={(e) => setSelectedYear(e.target.value)}
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
                 >
-                  <option value="1">none</option>
-                  <option value="2">1st Year</option>
-                  <option value="3">2nd Year</option>
-                  <option value="4">3rd Year</option>
+                  <option value="1">1st Year</option>
+                  <option value="2">2nd Year</option>
+                  <option value="3">3rd Year</option>
                 </select>
               </div>
               

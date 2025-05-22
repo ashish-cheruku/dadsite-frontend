@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ErrorDisplay, setSafeError } from '../utils/errorHandler';
+import { Helmet } from 'react-helmet';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -657,6 +658,22 @@ const StudentManagement = () => {
           year: 'numeric'
         });
 
+        // Add college logo
+        try {
+          setPdfGenerationProgress('Adding college logo...');
+          const logoUrl = '/images/logo.png';
+          const logoWidth = 20;
+          const logoHeight = 20;
+          const logoX = 20;
+          const logoY = y - 10;
+          
+          // Add logo image to the PDF
+          doc.addImage(logoUrl, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        } catch (logoError) {
+          console.error('Error adding logo to PDF:', logoError);
+          // Continue without the logo if there's an error
+        }
+
         // Header
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -864,6 +881,11 @@ const StudentManagement = () => {
   if (showStudentInfo && studentDetails) {
     return (
       <div className="min-h-screen flex flex-col bg-[#171010]">
+        <Helmet>
+          <title>Student Information | Government Junior College</title>
+          <link rel="icon" type="image/png" href="/images/logo.png" />
+        </Helmet>
+        
         <Navbar />
         
         <main className="flex-1 container py-8 mx-auto px-4">
@@ -1503,6 +1525,11 @@ const StudentManagement = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#171010]">
+      <Helmet>
+        <title>Student Management | Government Junior College</title>
+        <link rel="icon" type="image/png" href="/images/logo.png" />
+      </Helmet>
+      
       <Navbar />
       
       <main className="flex-1 container py-8 mx-auto px-4">
