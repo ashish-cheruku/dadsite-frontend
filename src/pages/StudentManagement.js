@@ -42,7 +42,7 @@ const StudentManagement = () => {
   const [studentExams, setStudentExams] = useState({exams: []});
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [loadingExams, setLoadingExams] = useState(false);
-  const [currentAcademicYear, setCurrentAcademicYear] = useState('2025');
+  const [currentAcademicYear, setCurrentAcademicYear] = useState('2024-2025');
   const [selectedMonth, setSelectedMonth] = useState('january');
   
   // Progress card generation state
@@ -537,9 +537,7 @@ const StudentManagement = () => {
         // Aggregate attendance from June to print month
         let totalWorkingDays = 0;
         let totalDaysPresent = 0;
-        
-        // Instead of filtering months, use all available attendance data
-        Object.keys(allMonthsAttendance).forEach(month => {
+        monthsToInclude.forEach(month => {
           const monthData = allMonthsAttendance[month] || { working_days: 0, days_present: 0 };
           totalWorkingDays += monthData.working_days || 0;
           totalDaysPresent += monthData.days_present || 0;
@@ -627,18 +625,6 @@ const StudentManagement = () => {
         doc.setFontSize(11);
         doc.text(`Academic Year: ${currentAcademicYear}`, pageWidth / 2, y, { align: 'center' });
         y += 7;
-        
-        // Add print date
-        const printDate = new Date();
-        const formattedDate = printDate.toLocaleDateString('en-IN', { 
-          day: '2-digit', 
-          month: '2-digit', 
-          year: 'numeric' 
-        });
-        doc.text(`Print Date: ${formattedDate}`, pageWidth / 2, y, { align: 'center' });
-        y += 7;
-        y += 4;
-        
         doc.setDrawColor(54, 34, 34);
         doc.line(20, y, pageWidth - 20, y);
         y += 4;
@@ -983,10 +969,8 @@ const StudentManagement = () => {
                       onChange={(e) => setCurrentAcademicYear(e.target.value)}
                       className="px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
                     >
-                      <option value="2025">2025</option>
-                      <option value="2026">2026</option>
-                      <option value="2027">2027</option>
-                      <option value="2028">2028</option>
+                      <option value="2024-2025">2024-2025</option>
+                      <option value="2025-2026">2025-2026</option>
                     </select>
                   </div>
                   
