@@ -658,21 +658,6 @@ const StudentManagement = () => {
           year: 'numeric'
         });
 
-        // Add college logo
-        try {
-          setPdfGenerationProgress('Adding college logo...');
-          const logoUrl = '/images/logo.png';
-          const logoWidth = 20;
-          const logoHeight = 20;
-          const logoX = 20;
-          const logoY = y - 10;
-          
-          // Add logo image to the PDF
-          doc.addImage(logoUrl, 'PNG', logoX, logoY, logoWidth, logoHeight);
-        } catch (logoError) {
-          console.error('Error adding logo to PDF:', logoError);
-          // Continue without the logo if there's an error
-        }
 
         // Header
         doc.setFontSize(16);
