@@ -669,8 +669,8 @@ const StudentManagement = () => {
         doc.setFontSize(11);
         doc.text(`Academic Year: ${progressCardAcademicYear}`, pageWidth / 2, y, { align: 'center' });
         y += 7;
-        doc.setFontSize(10);
-        doc.text(`Generated on: ${formattedDate}`, pageWidth / 2, y, { align: 'right' });
+        doc.setFontSize(5);
+        doc.text(`Generated on: ${formattedDate}`, pageWidth / 2, y, { align: 'center' });
         y += 7;
         doc.setDrawColor(54, 34, 34);
         doc.line(20, y, pageWidth - 20, y);
