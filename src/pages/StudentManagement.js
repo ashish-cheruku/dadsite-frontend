@@ -42,7 +42,7 @@ const StudentManagement = () => {
   const [studentExams, setStudentExams] = useState({exams: []});
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [loadingExams, setLoadingExams] = useState(false);
-  const [currentAcademicYear, setCurrentAcademicYear] = useState('2024-2025');
+  const [currentAcademicYear, setCurrentAcademicYear] = useState('2025');
   const [selectedMonth, setSelectedMonth] = useState('january');
   
   // Progress card generation state
@@ -625,6 +625,15 @@ const StudentManagement = () => {
         doc.setFontSize(11);
         doc.text(`Academic Year: ${currentAcademicYear}`, pageWidth / 2, y, { align: 'center' });
         y += 7;
+        
+        // Add print date
+        const currentDate = new Date().toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        doc.text(`Date: ${currentDate}`, pageWidth - 20, y, { align: 'right' });
+        
         doc.setDrawColor(54, 34, 34);
         doc.line(20, y, pageWidth - 20, y);
         y += 4;
@@ -705,6 +714,8 @@ const StudentManagement = () => {
         doc.setFont('helvetica', 'bold');
         doc.text('Attendance Summary', 20, y);
         y += 4;
+        
+        // Display overall summary first
         const attTableHead = [['Total Working Days', 'Total Days Present', 'Attendance Percentage']];
         const attTableBody = [[totalWorkingDays, totalDaysPresent, overallPercentage + '%']];
         autoTable(doc, {
@@ -718,8 +729,60 @@ const StudentManagement = () => {
           margin: { left: 20, right: 20 },
           tableWidth: 'auto'
         });
-        y = doc.lastAutoTable.finalY + 15;
-
+        y = doc.lastAutoTable.finalY + 10;
+        
+        // Display detailed monthly attendance data
+        y += 4;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Monthly Attendance Details', 20, y);
+        y += 4;
+        
+        // Prepare monthly attendance data
+        const monthlyAttHead = [['Month', 'Working Days', 'Days Present', 'Percentage']];
+        const monthlyAttBody = [];
+        
+        // Capitalize first letter of month
+        const formatMonth = (month) => month.charAt(0).toUpperCase() + month.slice(1);
+        
+        // Add all months with data
+        months.forEach(month => {
+          const monthData = allMonthsAttendance[month] || { working_days: 0, days_present: 0, attendance_percentage: 0 };
+          if (monthData.working_days > 0) {
+            const percentage = monthData.attendance_percentage ? 
+              `${monthData.attendance_percentage.toFixed(1)}%` : 
+              (monthData.working_days > 0 ? 
+                `${((monthData.days_present / monthData.working_days) * 100).toFixed(1)}%` : 
+                '0.0%');
+            
+            monthlyAttBody.push([
+              formatMonth(month), 
+              monthData.working_days, 
+              monthData.days_present, 
+              percentage
+            ]);
+          }
+        });
+        
+        // Only show the monthly table if there's data
+        if (monthlyAttBody.length > 0) {
+          autoTable(doc, {
+            startY: y,
+            head: monthlyAttHead,
+            body: monthlyAttBody,
+            theme: 'grid',
+            headStyles: { fillColor: [54, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
+            bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            styles: { fontSize: 8, cellPadding: 2 },
+            margin: { left: 20, right: 20 },
+            tableWidth: 'auto'
+          });
+          y = doc.lastAutoTable.finalY + 15;
+        } else {
+          y += 10;
+        }
+        
         // Signature Section
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
@@ -969,8 +1032,10 @@ const StudentManagement = () => {
                       onChange={(e) => setCurrentAcademicYear(e.target.value)}
                       className="px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
                     >
-                      <option value="2024-2025">2024-2025</option>
-                      <option value="2025-2026">2025-2026</option>
+                      <option value="2025">2025</option>
+                      <option value="2026">2026</option>
+                      <option value="2027">2027</option>
+                      <option value="2028">2028</option>
                     </select>
                   </div>
                   
@@ -1306,7 +1371,7 @@ const StudentManagement = () => {
                     <select
                       name="year"
                       value={currentStudent.year}
-                      onChange={(e) => handleStudentInputChange(e, false)}
+                    onChange={(e) => handleStudentInputChange(e, false)}
                       className="mt-1 block w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white focus:outline-none"
                       required
                     >
