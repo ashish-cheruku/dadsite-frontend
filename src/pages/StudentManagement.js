@@ -48,6 +48,7 @@ const StudentManagement = () => {
   // Progress card generation state
   const [pdfGenerationProgress, setPdfGenerationProgress] = useState('Initializing...');
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [progressCardAcademicYear, setProgressCardAcademicYear] = useState('2024-2025');
 
   // New student form state
   const [newStudent, setNewStudent] = useState({
@@ -196,7 +197,7 @@ const StudentManagement = () => {
       const requests = months.map(month => 
         attendanceService.getStudentAttendance(
           studentId,
-          currentAcademicYear,
+          progressCardAcademicYear, // Use the selected academic year for the progress card
           month
         )
         .catch(error => {
@@ -528,13 +529,47 @@ const StudentManagement = () => {
           allMonthsAttendance = {};
         }
 
-        // Determine the print month (current month)
+        // Get current date information
         const now = new Date();
-        const printMonthIndex = now.getMonth(); // 0-based (0=Jan, 5=June)
-        const startMonthIndex = 5; // June
-        const monthsToInclude = months.slice(startMonthIndex, printMonthIndex + 1);
+        const currentMonth = now.getMonth(); // 0-based (0=Jan, 11=Dec)
+        const juneIndex = 5; // June is index 5 (0-based)
+        
+        // Parse selected academic year
+        const selectedAcademicYear = progressCardAcademicYear;
+        const academicYearParts = selectedAcademicYear.split('-').map(part => parseInt(part, 10));
+        
+        // Determine which months to include based on selected academic year and current month
+        let monthsToInclude = [];
+        
+        // For academic year (e.g., 2024-2025), include June-December of first year and January-May of second year
+        // But only up to the current month if we're in the current academic year
+        const isCurrentAcademicYear = (
+          (now.getFullYear() === academicYearParts[0] && currentMonth >= juneIndex) || 
+          (now.getFullYear() === academicYearParts[1] && currentMonth < juneIndex)
+        );
+        
+        if (isCurrentAcademicYear) {
+          // We're in the current academic year, so only include months up to the current month
+          if (currentMonth >= juneIndex) {
+            // Current month is June-December of the first year of academic year
+            monthsToInclude = months.slice(juneIndex, currentMonth + 1);
+          } else {
+            // Current month is January-May of the second year of academic year
+            const firstYearMonths = months.slice(juneIndex); // June-December of first year
+            const secondYearMonths = months.slice(0, currentMonth + 1); // January through current month of second year
+            monthsToInclude = [...firstYearMonths, ...secondYearMonths];
+          }
+        } else {
+          // Past academic year, include all months from June-May
+          const firstYearMonths = months.slice(juneIndex); // June-December of first year
+          const secondYearMonths = months.slice(0, juneIndex); // January-May of second year
+          monthsToInclude = [...firstYearMonths, ...secondYearMonths];
+        }
 
-        // Aggregate attendance from June to print month
+        console.log('Months included in attendance calculation:', monthsToInclude);
+        console.log('Selected academic year:', selectedAcademicYear);
+        
+        // Aggregate attendance from all included months
         let totalWorkingDays = 0;
         let totalDaysPresent = 0;
         monthsToInclude.forEach(month => {
@@ -542,6 +577,7 @@ const StudentManagement = () => {
           totalWorkingDays += monthData.working_days || 0;
           totalDaysPresent += monthData.days_present || 0;
         });
+        
         const overallPercentage = totalWorkingDays > 0 ? ((totalDaysPresent / totalWorkingDays) * 100).toFixed(1) : "0.0";
 
         // Prepare exam data for the table
@@ -613,6 +649,14 @@ const StudentManagement = () => {
         const pageWidth = doc.internal.pageSize.getWidth();
         let y = 15;
 
+        // Get current date for the report
+        const currentDate = new Date();
+        const formattedDate = currentDate.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+
         // Header
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -623,7 +667,10 @@ const StudentManagement = () => {
         doc.text('Student Performance Report', pageWidth / 2, y, { align: 'center' });
         y += 7;
         doc.setFontSize(11);
-        doc.text(`Academic Year: ${currentAcademicYear}`, pageWidth / 2, y, { align: 'center' });
+        doc.text(`Academic Year: ${progressCardAcademicYear}`, pageWidth / 2, y, { align: 'center' });
+        y += 7;
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${formattedDate}`, pageWidth / 2, y, { align: 'right' });
         y += 7;
         doc.setDrawColor(54, 34, 34);
         doc.line(20, y, pageWidth - 20, y);
@@ -867,6 +914,34 @@ const StudentManagement = () => {
                 </div>
               </div>
             )}
+            
+            {/* Progress Card Options */}
+            <div className="bg-[#2B2B2B] rounded-lg p-4 mb-6 border border-[#423F3E]">
+              <h3 className="text-lg font-semibold text-white mb-3">Progress Card Options</h3>
+              <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+                <div className="flex-1">
+                  <label className="block text-gray-300 text-sm mb-1">Academic Year</label>
+                  <select
+                    value={progressCardAcademicYear}
+                    onChange={(e) => setProgressCardAcademicYear(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
+                  >
+                    <option value="2023-2024">2023-2024</option>
+                    <option value="2024-2025">2024-2025</option>
+                    <option value="2025-2026">2025-2026</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Select the academic year for which to generate the progress card.
+                  </p>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-gray-300 text-sm mb-1">Information</label>
+                  <div className="text-xs text-gray-400 p-2 bg-[#171010] rounded-md border border-[#423F3E] h-[70px] overflow-y-auto">
+                    <p>The progress card will include attendance data from June to the current month for the selected academic year. If selecting a past academic year, data from June to May will be included.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             {/* Student Details Card */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
