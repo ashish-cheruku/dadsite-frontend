@@ -583,16 +583,14 @@ const AttendanceManagement = () => {
               </div>
               
               <div>
-                <label className="block text-gray-300 text-sm mb-1">Year</label>
+                <label className="block text-gray-300 text-sm mb-1">Academic Year</label>
                 <select 
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
                 >
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                  <option value="2028">2028</option>
+                  <option value="2024-2025">2024-2025</option>
+                  <option value="2025-2026">2025-2026</option>
                 </select>
               </div>
             </div>
