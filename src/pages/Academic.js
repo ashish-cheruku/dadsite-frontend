@@ -83,7 +83,7 @@ const Academic = () => {
                 <ul className="list-disc list-inside text-gray-300 space-y-1 pl-2">
                   <li>T&HM (Travel & Hospitality Management)</li>
                   <li>MPHW (Multi Purpose Health Worker)</li>
-                  <li>OAS (Office Administration & Stenography)</li>
+                  <li>OAS (Office Assistantship)</li>
                   <li>Practical training for direct employment</li>
                 </ul>
               </div>
