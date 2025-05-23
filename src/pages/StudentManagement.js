@@ -1394,7 +1394,6 @@ const StudentManagement = () => {
                     >
                       <option value={1}>1st Year</option>
                       <option value={2}>2nd Year</option>
-                      <option value={3}>3rd Year</option>
                     </select>
                   </div>
                   
@@ -1580,7 +1579,7 @@ const StudentManagement = () => {
                   <option value="">All Years</option>
                   <option value="1">1st Year</option>
                   <option value="2">2nd Year</option>
-                  <option value="3">3rd Year</option>
+
                 </select>
               </div>
               
@@ -1844,7 +1843,7 @@ const StudentManagement = () => {
                   >
                     <option value={1}>1st Year</option>
                     <option value={2}>2nd Year</option>
-                    <option value={3}>3rd Year</option>
+
                   </select>
                 </div>
                 
@@ -2033,7 +2032,6 @@ const StudentManagement = () => {
                   >
                     <option value={1}>1st Year</option>
                     <option value={2}>2nd Year</option>
-                    <option value={3}>3rd Year</option>
                   </select>
                 </div>
                 
