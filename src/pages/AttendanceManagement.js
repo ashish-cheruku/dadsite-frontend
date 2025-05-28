@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { attendanceService } from '../services/api';
 import { authService } from '../services/api';
 import Navbar from '../components/Navbar';
@@ -6,6 +6,23 @@ import { Button } from '../components/ui/button';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { ErrorDisplay, setSafeError } from '../utils/errorHandler';
+
+// Debounce hook for performance optimization
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const AttendanceManagement = () => {
   const [loading, setLoading] = useState(true);
@@ -19,10 +36,18 @@ const AttendanceManagement = () => {
   const [selectedMonth, setSelectedMonth] = useState('january');
   const [academicYear, setAcademicYear] = useState('2024-2025');
   
+  // Debounced filter values to reduce API calls
+  const debouncedYear = useDebounce(selectedYear, 300);
+  const debouncedGroup = useDebounce(selectedGroup, 300);
+  const debouncedMedium = useDebounce(selectedMedium, 300);
+  const debouncedMonth = useDebounce(selectedMonth, 300);
+  const debouncedAcademicYear = useDebounce(academicYear, 300);
+  
   // Multi-month selection for export
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [exportLoading, setExportLoading] = useState(false);
+  const [exportProgress, setExportProgress] = useState('');
   
   // Working days state (for principal)
   const [workingDays, setWorkingDays] = useState(0);
@@ -45,6 +70,14 @@ const AttendanceManagement = () => {
   const [percentageThreshold, setPercentageThreshold] = useState(75);
   const [loadingLowAttendance, setLoadingLowAttendance] = useState(false);
   
+  // Cache for API responses to avoid redundant calls
+  const [dataCache, setDataCache] = useState(new Map());
+  
+  // Memoized cache key generator
+  const getCacheKey = useCallback((year, group, medium, academicYear, month) => {
+    return `${year}-${group}-${medium || 'all'}-${academicYear}-${month}`;
+  }, []);
+  
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -63,29 +96,44 @@ const AttendanceManagement = () => {
       setLoading(true);
       setError(''); // Clear any previous errors
       
-      // First fetch the working days to ensure we have the latest value
-      const workingDaysData = await attendanceService.getWorkingDays(
-        academicYear,
-        selectedMonth
-      );
+      // Generate cache key
+      const cacheKey = getCacheKey(debouncedYear, debouncedGroup, debouncedMedium, debouncedAcademicYear, debouncedMonth);
+      
+      // Check cache first
+      if (dataCache.has(cacheKey)) {
+        const cachedData = dataCache.get(cacheKey);
+        setClassAttendance(cachedData.classAttendance);
+        setWorkingDays(cachedData.workingDays);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch working days and class attendance in parallel
+      const [workingDaysData, classAttendanceData] = await Promise.all([
+        attendanceService.getWorkingDays(debouncedAcademicYear, debouncedMonth),
+        attendanceService.getClassAttendance(
+          parseInt(debouncedYear),
+          debouncedGroup,
+          debouncedAcademicYear,
+          debouncedMonth,
+          debouncedMedium || null
+        )
+      ]);
       
       console.log('Working days data:', workingDaysData);
+      console.log('Class attendance data:', classAttendanceData);
+      
       setWorkingDays(workingDaysData.working_days);
+      setClassAttendance(classAttendanceData);
       
-      // Then fetch the class attendance data
-      const data = await attendanceService.getClassAttendance(
-        parseInt(selectedYear),
-        selectedGroup,
-        academicYear,
-        selectedMonth,
-        selectedMedium || null
-      );
-      
-      console.log('Class attendance data:', data);
-      setClassAttendance(data);
+      // Cache the results
+      setDataCache(prev => new Map(prev.set(cacheKey, {
+        classAttendance: classAttendanceData,
+        workingDays: workingDaysData.working_days
+      })));
       
       // Double-check to make sure working days are consistent
-      if (data.working_days !== workingDaysData.working_days) {
+      if (classAttendanceData.working_days !== workingDaysData.working_days) {
         console.warn('Working days mismatch between API endpoints');
       }
     } catch (err) {
@@ -94,20 +142,20 @@ const AttendanceManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, selectedGroup, selectedMedium, academicYear, selectedMonth]);
+  }, [debouncedYear, debouncedGroup, debouncedMedium, debouncedAcademicYear, debouncedMonth, getCacheKey, dataCache]);
   
   const fetchLowAttendanceStudents = useCallback(async () => {
     try {
       setLoadingLowAttendance(true);
       setError('');
       
-      const year = selectedYear ? parseInt(selectedYear) : null;
-      const group = selectedGroup || null;
-      const medium = selectedMedium || null;
+      const year = debouncedYear ? parseInt(debouncedYear) : null;
+      const group = debouncedGroup || null;
+      const medium = debouncedMedium || null;
       
       const data = await attendanceService.getStudentsWithLowAttendance(
-        academicYear,
-        selectedMonth,
+        debouncedAcademicYear,
+        debouncedMonth,
         percentageThreshold,
         year,
         group,
@@ -121,20 +169,20 @@ const AttendanceManagement = () => {
     } finally {
       setLoadingLowAttendance(false);
     }
-  }, [academicYear, selectedMonth, percentageThreshold, selectedYear, selectedGroup, selectedMedium]);
+  }, [debouncedAcademicYear, debouncedMonth, percentageThreshold, debouncedYear, debouncedGroup, debouncedMedium]);
   
   useEffect(() => {
-    if (selectedYear && selectedGroup && selectedMonth && academicYear) {
+    if (debouncedYear && debouncedGroup && debouncedMonth && debouncedAcademicYear) {
       fetchClassAttendance();
     }
-  }, [selectedYear, selectedGroup, selectedMedium, selectedMonth, academicYear, fetchClassAttendance]);
+  }, [debouncedYear, debouncedGroup, debouncedMedium, debouncedMonth, debouncedAcademicYear, fetchClassAttendance]);
   
   // Fetch low attendance data when tab changes to low attendance or when filters change
   useEffect(() => {
     if (activeTab === 'lowAttendance' && percentageThreshold > 0) {
       fetchLowAttendanceStudents();
     }
-  }, [activeTab, academicYear, selectedMonth, percentageThreshold, selectedYear, selectedGroup, selectedMedium, fetchLowAttendanceStudents]);
+  }, [activeTab, debouncedAcademicYear, debouncedMonth, percentageThreshold, debouncedYear, debouncedGroup, debouncedMedium, fetchLowAttendanceStudents]);
   
   // Initialize temporary attendance values when class attendance is fetched
   useEffect(() => {
@@ -178,14 +226,11 @@ const AttendanceManagement = () => {
         return;
       }
       
-      // Save the current days present value to update the UI optimistically
-      const currentDaysPresent = daysPresent;
-      
       // Call API to update attendance
       const result = await attendanceService.updateStudentAttendance(
         studentId,
-        academicYear,
-        selectedMonth,
+        debouncedAcademicYear,
+        debouncedMonth,
         daysPresent
       );
       
@@ -195,30 +240,14 @@ const AttendanceManagement = () => {
         [studentId]: result.days_present
       }));
       
-      // Only refresh the full data if necessary to avoid resetting values
-      // This is commented out to prevent resetting values
-      // await fetchClassAttendance();
+      // Clear cache for this specific combination to force refresh on next load
+      const cacheKey = getCacheKey(debouncedYear, debouncedGroup, debouncedMedium, debouncedAcademicYear, debouncedMonth);
+      setDataCache(prev => {
+        const newCache = new Map(prev);
+        newCache.delete(cacheKey);
+        return newCache;
+      });
       
-      // Instead, update the specific student's attendance in the classAttendance state
-      if (classAttendance && classAttendance.students) {
-        const updatedStudents = classAttendance.students.map(student => {
-          if (student.student_id === studentId) {
-            return {
-              ...student,
-              days_present: currentDaysPresent,
-              attendance_percentage: workingDays > 0 
-                ? Math.round((currentDaysPresent / workingDays) * 100 * 10) / 10 
-                : 0
-            };
-          }
-          return student;
-        });
-        
-        setClassAttendance({
-          ...classAttendance,
-          students: updatedStudents
-        });
-      }
     } catch (err) {
       console.error('Error updating attendance:', err);
       setSafeError(setError, err, 'Failed to update attendance');
@@ -231,34 +260,27 @@ const AttendanceManagement = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      setError(''); // Clear any previous errors
+      setError('');
       
-      // Validate the new working days value
-      const workingDaysValue = parseInt(newWorkingDays);
-      if (isNaN(workingDaysValue) || workingDaysValue < 0 || workingDaysValue > 31) {
+      if (newWorkingDays < 0 || newWorkingDays > 31) {
         setError('Working days must be between 0 and 31');
         setLoading(false);
         return;
       }
       
-      console.log('Setting working days to:', workingDaysValue);
-      
-      // Call the API to update working days
-      const result = await attendanceService.setWorkingDays(
-        selectedMonth,
-        academicYear,
-        workingDaysValue
+      await attendanceService.setWorkingDays(
+        debouncedAcademicYear,
+        debouncedMonth,
+        newWorkingDays
       );
       
-      console.log('Set working days result:', result);
-      
-      // Close the modal
+      setWorkingDays(newWorkingDays);
       setIsWorkingDaysModalOpen(false);
       
-      // Update the working days in the UI immediately
-      setWorkingDays(workingDaysValue);
+      // Clear cache to force refresh
+      setDataCache(new Map());
       
-      // Then refresh the full data to ensure consistency
+      // Refresh the attendance data
       await fetchClassAttendance();
     } catch (err) {
       console.error('Error setting working days:', err);
@@ -268,37 +290,29 @@ const AttendanceManagement = () => {
     }
   };
   
-  // Format month name for display (capitalize first letter)
   const formatMonthName = (month) => {
     return month.charAt(0).toUpperCase() + month.slice(1);
   };
   
-  // Add handler for toggling month selection
   const handleMonthToggle = (month) => {
-    setSelectedMonths(prev => {
-      if (prev.includes(month)) {
-        return prev.filter(m => m !== month);
-      } else {
-        return [...prev, month];
-      }
-    });
+    if (selectedMonths.includes(month)) {
+      setSelectedMonths(selectedMonths.filter(m => m !== month));
+    } else {
+      setSelectedMonths([...selectedMonths, month]);
+    }
   };
   
-  // Handler to select all months
   const handleSelectAllMonths = () => {
-    const months = [
-      'january', 'february', 'march', 'april', 'may', 'june',
-      'july', 'august', 'september', 'october', 'november', 'december'
-    ];
-    setSelectedMonths(months);
+    const allMonths = ['january', 'february', 'march', 'april', 'may', 'june', 
+                      'july', 'august', 'september', 'october', 'november', 'december'];
+    setSelectedMonths(allMonths);
   };
   
-  // Handler to clear selection
   const handleClearMonthSelection = () => {
     setSelectedMonths([]);
   };
   
-  // Export attendance data for selected months
+  // Optimized export function with better progress tracking
   const exportAttendanceData = async () => {
     if (selectedMonths.length === 0) {
       setError('Please select at least one month to export');
@@ -308,25 +322,47 @@ const AttendanceManagement = () => {
     try {
       setExportLoading(true);
       setError('');
+      setExportProgress('Initializing export...');
       
       // Create workbook
       const wb = XLSX.utils.book_new();
       
-      // Process each selected month
-      for (const month of selectedMonths) {
-        try {
-          // Fetch data for this month
-          const data = await attendanceService.getClassAttendance(
-            parseInt(selectedYear),
-            selectedGroup,
-            academicYear,
-            month,
-            selectedMedium || null
-          );
-          
-          // Skip if no data
+      // Process months in batches to improve performance
+      const batchSize = 3;
+      const monthBatches = [];
+      for (let i = 0; i < selectedMonths.length; i += batchSize) {
+        monthBatches.push(selectedMonths.slice(i, i + batchSize));
+      }
+      
+      let processedMonths = 0;
+      const totalMonths = selectedMonths.length;
+      
+      for (const batch of monthBatches) {
+        setExportProgress(`Processing months ${processedMonths + 1}-${Math.min(processedMonths + batch.length, totalMonths)} of ${totalMonths}...`);
+        
+        // Process batch in parallel
+        const batchPromises = batch.map(async (month) => {
+          try {
+            const data = await attendanceService.getClassAttendance(
+              parseInt(debouncedYear),
+              debouncedGroup,
+              debouncedAcademicYear,
+              month,
+              debouncedMedium || null
+            );
+            return { month, data };
+          } catch (err) {
+            console.error(`Error fetching data for ${month}:`, err);
+            return { month, data: null };
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        
+        // Process results
+        batchResults.forEach(({ month, data }) => {
           if (!data || !data.students || data.students.length === 0) {
-            continue;
+            return;
           }
           
           // Create headers
@@ -364,36 +400,42 @@ const AttendanceManagement = () => {
           
           // Add worksheet to workbook (sheet name is capitalized month name)
           XLSX.utils.book_append_sheet(wb, ws, formatMonthName(month));
-        } catch (err) {
-          console.error(`Error fetching data for ${month}:`, err);
-          // Continue with next month
-        }
+        });
+        
+        processedMonths += batch.length;
       }
       
       // Check if any data was added
       if (wb.SheetNames.length === 0) {
         setError('No data available for the selected months');
         setExportLoading(false);
+        setExportProgress('');
         return;
       }
+      
+      setExportProgress('Generating Excel file...');
       
       // Generate Excel file
       const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
       // Create filename with class and date info
-      const filename = `attendance_${selectedYear}_${selectedGroup}${selectedMedium ? '_' + selectedMedium : ''}_${academicYear}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const filename = `attendance_${debouncedYear}_${debouncedGroup}${debouncedMedium ? '_' + debouncedMedium : ''}_${debouncedAcademicYear}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      
+      setExportProgress('Downloading file...');
       
       // Save file
       saveAs(blob, filename);
       
       // Close modal after successful export
       setIsExportModalOpen(false);
+      setExportProgress('');
     } catch (err) {
       console.error('Error exporting attendance data:', err);
       setSafeError(setError, err, 'Failed to export attendance data');
     } finally {
       setExportLoading(false);
+      setExportProgress('');
     }
   };
   
@@ -453,7 +495,7 @@ const AttendanceManagement = () => {
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
       // Create filename with info
-      const filename = `low_attendance_below_${percentageThreshold}pct_${selectedMonth}_${academicYear}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const filename = `low_attendance_below_${percentageThreshold}pct_${debouncedMonth}_${debouncedAcademicYear}_${new Date().toISOString().slice(0, 10)}.xlsx`;
       
       // Save file
       saveAs(blob, filename);
@@ -464,6 +506,55 @@ const AttendanceManagement = () => {
       setExportLoading(false);
     }
   };
+  
+  // Memoized student rows to prevent unnecessary re-renders
+  const studentRows = useMemo(() => {
+    if (!classAttendance || !classAttendance.students) return [];
+    
+    return classAttendance.students.map((student) => (
+      <tr key={student.student_id} className="hover:bg-[#362222]">
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
+          {student.admission_number}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
+          {student.student_name}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
+          <div className="flex items-center space-x-2">
+            <input
+              type="number"
+              min="0"
+              max={workingDays}
+              value={tempAttendance[student.student_id] || 0}
+              onChange={(e) => handleAttendanceInputChange(student.student_id, e.target.value)}
+              className="w-20 px-2 py-1 bg-[#171010] border border-[#423F3E] rounded text-white text-center"
+            />
+            <Button
+              onClick={() => handleUpdateAttendance(student.student_id)}
+              disabled={savingStudents[student.student_id] || tempAttendance[student.student_id] === student.days_present}
+              className="px-3 py-1 text-xs"
+              style={{ 
+                backgroundColor: tempAttendance[student.student_id] === student.days_present ? '#666' : '#362222', 
+                color: 'white' 
+              }}
+            >
+              {savingStudents[student.student_id] ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
+          {workingDays}
+        </td>
+        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+          student.attendance_percentage >= 75 ? 'text-green-400' : 
+          student.attendance_percentage >= 50 ? 'text-yellow-400' : 
+          'text-red-400'
+        }`}>
+          {student.attendance_percentage.toFixed(1)}%
+        </td>
+      </tr>
+    ));
+  }, [classAttendance, tempAttendance, workingDays, savingStudents, handleAttendanceInputChange, handleUpdateAttendance]);
   
   if (loading && !classAttendance && activeTab === 'attendance') {
     return (
@@ -513,6 +604,16 @@ const AttendanceManagement = () => {
           
           <ErrorDisplay error={error} />
           
+          {/* Loading indicator for filter changes */}
+          {loading && classAttendance && (
+            <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-4 mb-6">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white mr-3"></div>
+                <span className="text-white">Updating attendance data...</span>
+              </div>
+            </div>
+          )}
+          
           {/* Class Selection */}
           <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-4 mb-6">
             <h3 className="text-white font-semibold mb-3">Select Class and Month</h3>
@@ -523,6 +624,7 @@ const AttendanceManagement = () => {
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
+                  disabled={loading}
                 >
                   <option value="1">1st Year</option>
                   <option value="2">2nd Year</option>
@@ -535,6 +637,7 @@ const AttendanceManagement = () => {
                   value={selectedGroup}
                   onChange={(e) => setSelectedGroup(e.target.value)}
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
+                  disabled={loading}
                 >
                   <option value="mpc">MPC</option>
                   <option value="bipc">BiPC</option>
@@ -552,6 +655,7 @@ const AttendanceManagement = () => {
                   value={selectedMedium}
                   onChange={(e) => setSelectedMedium(e.target.value)}
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
+                  disabled={loading}
                 >
                   <option value="">All Mediums</option>
                   <option value="english">English</option>
@@ -565,6 +669,7 @@ const AttendanceManagement = () => {
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
+                  disabled={loading}
                 >
                   <option value="january">January</option>
                   <option value="february">February</option>
@@ -587,6 +692,7 @@ const AttendanceManagement = () => {
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
+                  disabled={loading}
                 >
                   <option value="2024-2025">2024-2025</option>
                   <option value="2025-2026">2025-2026</option>
@@ -651,14 +757,14 @@ const AttendanceManagement = () => {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Student Name
                       </th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Days Present
                       </th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Attendance %
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Working Days
                       </th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Actions
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Attendance %
                       </th>
                     </tr>
                   </thead>
@@ -670,44 +776,7 @@ const AttendanceManagement = () => {
                         </td>
                       </tr>
                     ) : (
-                      classAttendance.students.map((student) => (
-                        <tr key={student.student_id} className="hover:bg-[#362222]">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
-                            {student.admission_number}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
-                            {student.student_name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              max={workingDays}
-                              value={tempAttendance[student.student_id] !== undefined ? tempAttendance[student.student_id] : student.days_present}
-                              onChange={(e) => handleAttendanceInputChange(student.student_id, e.target.value)}
-                              className="w-20 px-3 py-1 bg-[#171010] border border-[#423F3E] rounded-md text-white text-center"
-                              disabled={userRole !== 'staff' && userRole !== 'principal'}
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                              ${student.attendance_percentage >= 75 ? 'bg-green-900 text-green-300' : 
-                                (student.attendance_percentage >= 50 ? 'bg-yellow-900 text-yellow-300' : 
-                                  'bg-red-900 text-red-300')}`}>
-                              {student.attendance_percentage.toFixed(1)}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                            <button
-                              onClick={() => handleUpdateAttendance(student.student_id)}
-                              className="px-3 py-1 bg-[#362222] text-white rounded hover:bg-[#423F3E]"
-                              disabled={(userRole !== 'staff' && userRole !== 'principal') || savingStudents[student.student_id]}
-                            >
-                              {savingStudents[student.student_id] ? 'Saving...' : 'Save'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      studentRows
                     )}
                   </tbody>
                 </table>
@@ -942,6 +1011,7 @@ const AttendanceManagement = () => {
                 type="button"
                 onClick={() => setIsExportModalOpen(false)}
                 className="px-4 py-2 bg-[#171010] text-white rounded-md hover:bg-[#362222]"
+                disabled={exportLoading}
               >
                 Cancel
               </button>
@@ -961,6 +1031,19 @@ const AttendanceManagement = () => {
                 )}
               </button>
             </div>
+            
+            {/* Export Progress */}
+            {exportLoading && exportProgress && (
+              <div className="mt-4 p-3 bg-[#171010] rounded-lg border border-[#423F3E]">
+                <div className="flex items-center">
+                  <div className="animate-spin h-4 w-4 mr-2 border-2 border-t-transparent border-white rounded-full"></div>
+                  <span className="text-white text-sm">{exportProgress}</span>
+                </div>
+                <div className="w-full bg-[#2B2B2B] rounded-full h-2 mt-2">
+                  <div className="bg-[#362222] h-2 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
