@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { ErrorDisplay, setSafeError } from '../utils/errorHandler';
+import { Helmet } from 'react-helmet';
 
 // Debounce hook for performance optimization
 const useDebounce = (value, delay) => {
@@ -225,13 +226,6 @@ const AttendanceManagement = () => {
   // Track pending changes for auto-save
   const pendingChangesDebounced = useAutoSave(pendingChanges, 2000);
 
-  // Auto-save effect
-  useEffect(() => {
-    if (autoSaveEnabled && pendingChangesDebounced.size > 0) {
-      handleAutoSave();
-    }
-  }, [pendingChangesDebounced, autoSaveEnabled, handleAutoSave]);
-
   // Bulk attendance update function with useCallback
   const handleBulkAttendanceUpdate = useCallback(async (attendanceUpdates) => {
     try {
@@ -309,20 +303,23 @@ const AttendanceManagement = () => {
     }
   }, [workingDays, debouncedAcademicYear, debouncedMonth, debouncedYear, debouncedGroup, debouncedMedium, getCacheKey]);
 
-  // Auto-save function with useCallback to prevent infinite re-renders
-  const handleAutoSave = useCallback(async () => {
-    if (pendingChanges.size === 0) return;
-    
-    try {
-      const changesToSave = Array.from(pendingChanges.entries());
-      await handleBulkAttendanceUpdate(changesToSave);
-      setPendingChanges(new Map());
-      setLastSaveTime(new Date());
-    } catch (err) {
-      console.error('Auto-save failed:', err);
-      // Don't clear pending changes on failure, allow retry
+  // Auto-save effect - simplified to avoid circular dependency
+  useEffect(() => {
+    if (autoSaveEnabled && pendingChangesDebounced.size > 0) {
+      const handleAutoSave = async () => {
+        try {
+          const changesToSave = Array.from(pendingChangesDebounced.entries());
+          await handleBulkAttendanceUpdate(changesToSave);
+          setPendingChanges(new Map());
+          setLastSaveTime(new Date());
+        } catch (err) {
+          console.error('Auto-save failed:', err);
+        }
+      };
+      
+      handleAutoSave();
     }
-  }, [pendingChanges, handleBulkAttendanceUpdate]);
+  }, [pendingChangesDebounced, autoSaveEnabled, handleBulkAttendanceUpdate]);
 
   // Enhanced attendance input change with auto-save tracking
   const handleAttendanceInputChange = (studentId, value) => {
@@ -837,6 +834,10 @@ const AttendanceManagement = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#171010]">
+      <Helmet>
+        <title>Attendance Management | Government Junior College</title>
+        <link rel="icon" type="image/png" href="/images/logo.png" />
+      </Helmet>
       <Navbar />
       
       <main className="flex-1 container py-8 mx-auto px-4">

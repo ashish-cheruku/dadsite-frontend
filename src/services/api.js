@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use environment variable for API URL with fallback for local development
-const API_URL = process.env.REACT_APP_API_URL || 'http://20.55.51.47:1821';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8004';
 
 // Token expiration handling
 const checkTokenExpiration = () => {
