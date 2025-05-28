@@ -78,6 +78,16 @@ const AttendanceManagement = () => {
     return `${year}-${group}-${medium || 'all'}-${academicYear}-${month}`;
   }, []);
   
+  // New state for bulk operations
+  const [selectedStudents, setSelectedStudents] = useState(new Set());
+  const [bulkValue, setBulkValue] = useState('');
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [pendingChanges, setPendingChanges] = useState(new Map());
+  const [lastSaveTime, setLastSaveTime] = useState(null);
+  const [bulkUpdateProgress, setBulkUpdateProgress] = useState('');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -195,21 +205,254 @@ const AttendanceManagement = () => {
     }
   }, [classAttendance]);
   
-  const handleAttendanceInputChange = (studentId, value) => {
-    // Validate input
-    let parsedValue = parseInt(value) || 0;
+  // Auto-save with debouncing
+  const useAutoSave = (value, delay = 2000) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
     
-    // Ensure value is within valid range
-    parsedValue = Math.max(0, parsedValue);
-    if (workingDays > 0) {
-      parsedValue = Math.min(parsedValue, workingDays);
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+      
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [value, delay]);
+    
+    return debouncedValue;
+  };
+
+  // Track pending changes for auto-save
+  const pendingChangesDebounced = useAutoSave(pendingChanges, 2000);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (autoSaveEnabled && pendingChangesDebounced.size > 0) {
+      handleAutoSave();
     }
+  }, [pendingChangesDebounced, autoSaveEnabled, handleAutoSave]);
+
+  // Auto-save function with useCallback to prevent infinite re-renders
+  const handleAutoSave = useCallback(async () => {
+    if (pendingChanges.size === 0) return;
     
-    // Update temporary state
+    try {
+      const changesToSave = Array.from(pendingChanges.entries());
+      await handleBulkAttendanceUpdate(changesToSave);
+      setPendingChanges(new Map());
+      setLastSaveTime(new Date());
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+      // Don't clear pending changes on failure, allow retry
+    }
+  }, [pendingChanges, handleBulkAttendanceUpdate]);
+
+  // Bulk attendance update function with useCallback
+  const handleBulkAttendanceUpdate = useCallback(async (attendanceUpdates) => {
+    try {
+      setIsBulkUpdating(true);
+      setBulkUpdateProgress('Preparing updates...');
+      
+      // Validate all updates first
+      for (const [studentId, daysPresent] of attendanceUpdates) {
+        if (daysPresent < 0 || (workingDays > 0 && daysPresent > workingDays)) {
+          throw new Error(`Invalid attendance value for student ${studentId}: must be between 0 and ${workingDays}`);
+        }
+      }
+      
+      // Process in batches of 10 for better performance
+      const batchSize = 10;
+      const batches = [];
+      for (let i = 0; i < attendanceUpdates.length; i += batchSize) {
+        batches.push(attendanceUpdates.slice(i, i + batchSize));
+      }
+      
+      let processedCount = 0;
+      const totalCount = attendanceUpdates.length;
+      
+      for (const batch of batches) {
+        setBulkUpdateProgress(`Updating ${processedCount + 1}-${Math.min(processedCount + batch.length, totalCount)} of ${totalCount} students...`);
+        
+        // Process batch in parallel
+        const batchPromises = batch.map(async ([studentId, daysPresent]) => {
+          try {
+            const result = await attendanceService.updateStudentAttendance(
+              studentId,
+              debouncedAcademicYear,
+              debouncedMonth,
+              daysPresent
+            );
+            return { studentId, success: true, result };
+          } catch (err) {
+            console.error(`Failed to update student ${studentId}:`, err);
+            return { studentId, success: false, error: err };
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        
+        // Update local state with successful results
+        batchResults.forEach(({ studentId, success, result }) => {
+          if (success) {
+            setTempAttendance(prev => ({
+              ...prev,
+              [studentId]: result.days_present
+            }));
+          }
+        });
+        
+        processedCount += batch.length;
+      }
+      
+      // Clear cache to force refresh
+      const cacheKey = getCacheKey(debouncedYear, debouncedGroup, debouncedMedium, debouncedAcademicYear, debouncedMonth);
+      setDataCache(prev => {
+        const newCache = new Map(prev);
+        newCache.delete(cacheKey);
+        return newCache;
+      });
+      
+      setBulkUpdateProgress('Updates completed successfully!');
+      setTimeout(() => setBulkUpdateProgress(''), 2000);
+      
+    } catch (err) {
+      console.error('Bulk update failed:', err);
+      setSafeError(setError, err, 'Failed to update attendance');
+      setBulkUpdateProgress('');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  }, [workingDays, debouncedAcademicYear, debouncedMonth, debouncedYear, debouncedGroup, debouncedMedium, getCacheKey, setDataCache, setSafeError, setError]);
+
+  // Enhanced attendance input change with auto-save tracking
+  const handleAttendanceInputChange = (studentId, value) => {
+    const numValue = parseInt(value) || 0;
+    
+    // Update temp attendance immediately (optimistic update)
     setTempAttendance(prev => ({
       ...prev,
-      [studentId]: parsedValue
+      [studentId]: numValue
     }));
+    
+    // Track pending changes for auto-save
+    if (autoSaveEnabled) {
+      setPendingChanges(prev => {
+        const newChanges = new Map(prev);
+        const originalValue = classAttendance?.students?.find(s => s.student_id === studentId)?.days_present || 0;
+        
+        if (numValue !== originalValue) {
+          newChanges.set(studentId, numValue);
+        } else {
+          newChanges.delete(studentId);
+        }
+        
+        return newChanges;
+      });
+    }
+  };
+
+  // Student selection functions
+  const handleSelectStudent = (studentId) => {
+    setSelectedStudents(prev => {
+      const newSelected = new Set(prev);
+      if (newSelected.has(studentId)) {
+        newSelected.delete(studentId);
+      } else {
+        newSelected.add(studentId);
+      }
+      return newSelected;
+    });
+  };
+
+  const handleSelectAllStudents = () => {
+    if (selectedStudents.size === classAttendance?.students?.length) {
+      setSelectedStudents(new Set());
+    } else {
+      const allStudentIds = classAttendance?.students?.map(s => s.student_id) || [];
+      setSelectedStudents(new Set(allStudentIds));
+    }
+  };
+
+  // Bulk actions
+  const handleBulkAction = async (action) => {
+    if (selectedStudents.size === 0) {
+      setError('Please select at least one student');
+      return;
+    }
+    
+    const selectedStudentIds = Array.from(selectedStudents);
+    
+    switch (action) {
+      case 'mark_present':
+        await handleQuickFill(workingDays, selectedStudentIds);
+        break;
+      case 'mark_absent':
+        await handleQuickFill(0, selectedStudentIds);
+        break;
+      case 'custom_value':
+        setIsBulkModalOpen(true);
+        break;
+      case 'save_selected':
+        const selectedChanges = selectedStudentIds
+          .map(id => [id, tempAttendance[id] || 0])
+          .filter(([id, value]) => {
+            const originalValue = classAttendance?.students?.find(s => s.student_id === id)?.days_present || 0;
+            return value !== originalValue;
+          });
+        
+        if (selectedChanges.length > 0) {
+          await handleBulkAttendanceUpdate(selectedChanges);
+        }
+        break;
+    }
+  };
+
+  // Quick fill function
+  const handleQuickFill = async (value, studentIds = null) => {
+    const targetStudents = studentIds || Array.from(selectedStudents);
+    
+    if (targetStudents.length === 0) {
+      setError('No students selected');
+      return;
+    }
+    
+    // Update temp attendance for all selected students
+    const updates = targetStudents.map(studentId => {
+      setTempAttendance(prev => ({
+        ...prev,
+        [studentId]: value
+      }));
+      return [studentId, value];
+    });
+    
+    // If auto-save is enabled, save immediately
+    if (autoSaveEnabled) {
+      await handleBulkAttendanceUpdate(updates);
+    } else {
+      // Otherwise, just update the UI
+      updates.forEach(([studentId, val]) => {
+        setPendingChanges(prev => {
+          const newChanges = new Map(prev);
+          newChanges.set(studentId, val);
+          return newChanges;
+        });
+      });
+    }
+    
+    setIsBulkModalOpen(false);
+    setBulkValue('');
+  };
+
+  // Save all pending changes
+  const handleSaveAllChanges = async () => {
+    if (pendingChanges.size === 0) {
+      setError('No changes to save');
+      return;
+    }
+    
+    const allChanges = Array.from(pendingChanges.entries());
+    await handleBulkAttendanceUpdate(allChanges);
+    setPendingChanges(new Map());
   };
   
   const handleUpdateAttendance = async (studentId) => {
@@ -507,12 +750,20 @@ const AttendanceManagement = () => {
     }
   };
   
-  // Memoized student rows to prevent unnecessary re-renders
-  const studentRows = useMemo(() => {
+  // Memoized student table rows for better performance
+  const studentTableRows = useMemo(() => {
     if (!classAttendance || !classAttendance.students) return [];
     
     return classAttendance.students.map((student) => (
-      <tr key={student.student_id} className="hover:bg-[#362222]">
+      <tr key={student.student_id} className={`hover:bg-[#362222] ${selectedStudents.has(student.student_id) ? 'bg-[#2a1f1f]' : ''}`}>
+        <td className="px-6 py-4 whitespace-nowrap text-center">
+          <input
+            type="checkbox"
+            checked={selectedStudents.has(student.student_id)}
+            onChange={() => handleSelectStudent(student.student_id)}
+            className="h-4 w-4 text-[#362222] bg-[#171010] border-[#423F3E] rounded focus:ring-0"
+          />
+        </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
           {student.admission_number}
         </td>
@@ -527,19 +778,36 @@ const AttendanceManagement = () => {
               max={workingDays}
               value={tempAttendance[student.student_id] || 0}
               onChange={(e) => handleAttendanceInputChange(student.student_id, e.target.value)}
-              className="w-20 px-2 py-1 bg-[#171010] border border-[#423F3E] rounded text-white text-center"
-            />
-            <Button
-              onClick={() => handleUpdateAttendance(student.student_id)}
-              disabled={savingStudents[student.student_id] || tempAttendance[student.student_id] === student.days_present}
-              className="px-3 py-1 text-xs"
-              style={{ 
-                backgroundColor: tempAttendance[student.student_id] === student.days_present ? '#666' : '#362222', 
-                color: 'white' 
+              className={`w-20 px-2 py-1 bg-[#171010] border rounded text-white text-center ${
+                pendingChanges.has(student.student_id) 
+                  ? 'border-yellow-500 bg-yellow-900/20' 
+                  : 'border-[#423F3E]'
+              }`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.target.blur();
+                }
               }}
-            >
-              {savingStudents[student.student_id] ? 'Saving...' : 'Save'}
-            </Button>
+            />
+            {!autoSaveEnabled && (
+              <Button
+                onClick={() => handleUpdateAttendance(student.student_id)}
+                disabled={savingStudents[student.student_id] || tempAttendance[student.student_id] === student.days_present}
+                className="px-3 py-1 text-xs"
+                style={{ 
+                  backgroundColor: tempAttendance[student.student_id] === student.days_present ? '#666' : '#362222', 
+                  color: 'white' 
+                }}
+              >
+                {savingStudents[student.student_id] ? 'Saving...' : 'Save'}
+              </Button>
+            )}
+            {pendingChanges.has(student.student_id) && autoSaveEnabled && (
+              <div className="flex items-center text-yellow-400 text-xs">
+                <div className="animate-pulse h-2 w-2 bg-yellow-400 rounded-full mr-1"></div>
+                Pending
+              </div>
+            )}
           </div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
@@ -554,7 +822,7 @@ const AttendanceManagement = () => {
         </td>
       </tr>
     ));
-  }, [classAttendance, tempAttendance, workingDays, savingStudents, handleAttendanceInputChange, handleUpdateAttendance]);
+  }, [classAttendance, tempAttendance, workingDays, savingStudents, selectedStudents, pendingChanges, autoSaveEnabled, handleAttendanceInputChange, handleUpdateAttendance, handleSelectStudent]);
   
   if (loading && !classAttendance && activeTab === 'attendance') {
     return (
@@ -603,6 +871,65 @@ const AttendanceManagement = () => {
           </div>
           
           <ErrorDisplay error={error} />
+          
+          {/* Auto-save Status */}
+          <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-4 mb-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="auto-save"
+                    checked={autoSaveEnabled}
+                    onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                    className="h-4 w-4 text-[#362222] bg-[#171010] border-[#423F3E] rounded focus:ring-0"
+                  />
+                  <label htmlFor="auto-save" className="text-white text-sm font-medium">
+                    Auto-save enabled
+                  </label>
+                </div>
+                
+                {pendingChanges.size > 0 && (
+                  <div className="flex items-center space-x-2 text-yellow-400 text-sm">
+                    <div className="animate-pulse h-2 w-2 bg-yellow-400 rounded-full"></div>
+                    <span>{pendingChanges.size} pending changes</span>
+                  </div>
+                )}
+                
+                {lastSaveTime && (
+                  <div className="text-green-400 text-sm">
+                    Last saved: {lastSaveTime.toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex space-x-2">
+                {!autoSaveEnabled && pendingChanges.size > 0 && (
+                  <Button
+                    onClick={handleSaveAllChanges}
+                    className="px-4 py-2 text-sm"
+                    style={{ backgroundColor: '#362222', color: 'white' }}
+                    disabled={isBulkUpdating}
+                  >
+                    Save All Changes ({pendingChanges.size})
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Bulk Update Progress */}
+          {isBulkUpdating && bulkUpdateProgress && (
+            <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-4 mb-6">
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-3"></div>
+                <span className="text-white font-medium">{bulkUpdateProgress}</span>
+              </div>
+              <div className="w-full bg-[#171010] rounded-full h-2 mt-2">
+                <div className="bg-[#362222] h-2 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+              </div>
+            </div>
+          )}
           
           {/* Loading indicator for filter changes */}
           {loading && classAttendance && (
@@ -718,190 +1045,145 @@ const AttendanceManagement = () => {
                     setNewWorkingDays(workingDays);
                     setIsWorkingDaysModalOpen(true);
                   }}
-                  className="py-1 px-3 rounded-lg"
+                  className="py-2 px-4 rounded-lg"
                   style={{ backgroundColor: '#362222', color: 'white' }}
                 >
-                  Update
+                  Update Working Days
                 </Button>
               )}
             </div>
           </div>
-          
-          {/* Tab Navigation */}
-          <div className="flex justify-between items-center border-b border-[#423F3E] mb-6 py-1">
-            <div>
-              <h3 className="text-xl font-semibold text-white">
-                {activeTab === 'attendance' ? 'Attendance Records' : 'Low Attendance Report'}
-              </h3>
-            </div>
-            <div>
-              <button
-                className={`py-2 px-4 font-medium text-white rounded-lg hover:opacity-90 transition-all ${activeTab === 'lowAttendance' ? 'bg-[#f44336]' : 'bg-[#362222] hover:bg-[#423F3E]'}`}
-                onClick={() => setActiveTab(activeTab === 'attendance' ? 'lowAttendance' : 'attendance')}
-              >
-                {activeTab === 'attendance' ? 'View Low Attendance Report' : 'Return to Attendance Records'}
-              </button>
-            </div>
-          </div>
-          
-          {activeTab === 'attendance' ? (
-            /* Regular Attendance Table */
-            <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#423F3E]">
-                  <thead className="bg-[#362222]">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Adm. No
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Student Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Days Present
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Working Days
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                        Attendance %
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-[#2B2B2B] divide-y divide-[#423F3E]">
-                    {!classAttendance || classAttendance.students.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" className="px-6 py-4 text-center text-gray-300">
-                          No students found in this class or no attendance records available.
-                        </td>
-                      </tr>
-                    ) : (
-                      studentRows
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            /* Low Attendance Report */
-            <>
-              {/* Threshold Filter */}
-              <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-4 mb-6">
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                  <div className="w-full md:w-64">
-                    <label className="block text-gray-300 text-sm mb-1">Attendance Threshold (%)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={percentageThreshold}
-                      onChange={(e) => setPercentageThreshold(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
-                    />
-                  </div>
-                  <div className="w-full md:w-auto mt-4 md:mt-6 flex gap-2">
+
+          {/* Bulk Actions Bar */}
+          {selectedStudents.size > 0 && (
+            <div className="bg-[#362222] rounded-lg shadow-md border border-[#423F3E] p-4 mb-6">
+              <div className="flex justify-between items-center">
+                <div className="text-white">
+                  <span className="font-medium">{selectedStudents.size}</span> student{selectedStudents.size !== 1 ? 's' : ''} selected
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => handleBulkAction('mark_present')}
+                    className="px-3 py-1 text-sm"
+                    style={{ backgroundColor: '#22c55e', color: 'white' }}
+                    disabled={isBulkUpdating}
+                  >
+                    Mark Present ({workingDays})
+                  </Button>
+                  <Button
+                    onClick={() => handleBulkAction('mark_absent')}
+                    className="px-3 py-1 text-sm"
+                    style={{ backgroundColor: '#ef4444', color: 'white' }}
+                    disabled={isBulkUpdating}
+                  >
+                    Mark Absent (0)
+                  </Button>
+                  <Button
+                    onClick={() => handleBulkAction('custom_value')}
+                    className="px-3 py-1 text-sm"
+                    style={{ backgroundColor: '#3b82f6', color: 'white' }}
+                    disabled={isBulkUpdating}
+                  >
+                    Custom Value
+                  </Button>
+                  {!autoSaveEnabled && (
                     <Button
-                      onClick={fetchLowAttendanceStudents}
-                      className="w-full md:w-auto py-2 px-4 rounded-lg"
+                      onClick={() => handleBulkAction('save_selected')}
+                      className="px-3 py-1 text-sm"
                       style={{ backgroundColor: '#362222', color: 'white' }}
+                      disabled={isBulkUpdating}
                     >
-                      Apply Filter
+                      Save Selected
                     </Button>
-                    {lowAttendanceStudents.length > 0 && (
-                      <Button
-                        onClick={exportLowAttendanceData}
-                        className="w-full md:w-auto py-2 px-4 rounded-lg flex items-center"
-                        style={{ backgroundColor: '#362222', color: 'white' }}
-                        disabled={exportLoading}
-                      >
-                        {exportLoading ? (
-                          <>
-                            <div className="animate-spin h-4 w-4 mr-2 border-2 border-t-transparent border-white rounded-full"></div>
-                            Exporting...
-                          </>
-                        ) : (
-                          <>Export</>
-                        )}
-                      </Button>
-                    )}
-                  </div>
+                  )}
+                  <Button
+                    onClick={() => setSelectedStudents(new Set())}
+                    className="px-3 py-1 text-sm"
+                    style={{ backgroundColor: '#6b7280', color: 'white' }}
+                  >
+                    Clear Selection
+                  </Button>
                 </div>
               </div>
-              
-              {/* Low Attendance Table */}
-              {loadingLowAttendance ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-                </div>
-              ) : (
-                <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-[#423F3E]">
-                      <thead className="bg-[#362222]">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Adm. No
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Student Name
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Year
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Group
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Present Days
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Working Days
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                            Attendance %
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-[#2B2B2B] divide-y divide-[#423F3E]">
-                        {lowAttendanceStudents.length === 0 ? (
-                          <tr>
-                            <td colSpan="7" className="px-6 py-4 text-center text-gray-300">
-                              No students found with attendance below {percentageThreshold}%.
-                            </td>
-                          </tr>
-                        ) : (
-                          lowAttendanceStudents.map((student) => (
-                            <tr key={student.student_id} className="hover:bg-[#362222]">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
-                                {student.admission_number}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
-                                {student.student_name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">
-                                {student.year}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200 capitalize">
-                                {student.group}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200 text-center">
-                                {student.days_present}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200 text-center">
-                                {student.working_days}
-                              </td>
-                              <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold text-center ${student.attendance_percentage < 50 ? 'text-red-400' : 'text-yellow-400'}`}>
-                                {student.attendance_percentage.toFixed(2)}%
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+            </div>
+          )}
+
+          {/* Attendance Table */}
+          {classAttendance && classAttendance.students && classAttendance.students.length > 0 ? (
+            <>
+              {/* Regular Attendance Table */}
+              <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#423F3E] bg-[#362222]">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-white">
+                      Class Attendance - {formatMonthName(selectedMonth)} {academicYear}
+                    </h3>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-sm text-gray-300">
+                        {classAttendance.students.length} students
+                      </div>
+                      <Button
+                        onClick={handleSelectAllStudents}
+                        className="px-3 py-1 text-sm"
+                        style={{ backgroundColor: '#171010', color: 'white' }}
+                      >
+                        {selectedStudents.size === classAttendance.students.length ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              )}
+                
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[#423F3E]">
+                    <thead className="bg-[#362222]">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          <input
+                            type="checkbox"
+                            checked={classAttendance.students.length > 0 && selectedStudents.size === classAttendance.students.length}
+                            onChange={handleSelectAllStudents}
+                            className="h-4 w-4 text-[#362222] bg-[#171010] border-[#423F3E] rounded focus:ring-0"
+                          />
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Admission No.
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Student Name
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Days Present
+                          {autoSaveEnabled && (
+                            <div className="text-xs text-yellow-400 font-normal mt-1">Auto-save enabled</div>
+                          )}
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Working Days
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Attendance %
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-[#2B2B2B] divide-y divide-[#423F3E]">
+                      {studentTableRows}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </>
+          ) : (
+            <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-8 text-center">
+              <div className="text-gray-300">
+                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+                <h3 className="text-lg font-medium text-white mb-2">No Students Found</h3>
+                <p className="text-gray-400">
+                  No students found in this class or no attendance records available for the selected filters.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </main>
@@ -1044,6 +1326,53 @@ const AttendanceManagement = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Value Modal */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#2B2B2B] rounded-lg shadow-xl border border-[#423F3E] p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-white mb-4">Set Custom Attendance</h2>
+            <p className="text-gray-300 mb-4">
+              Set attendance for {selectedStudents.size} selected student{selectedStudents.size !== 1 ? 's' : ''}
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Days Present</label>
+              <input
+                type="number"
+                min="0"
+                max={workingDays}
+                value={bulkValue}
+                onChange={(e) => setBulkValue(e.target.value)}
+                className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
+                placeholder={`Enter value (0-${workingDays})`}
+                autoFocus
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <Button
+                onClick={() => {
+                  setIsBulkModalOpen(false);
+                  setBulkValue('');
+                }}
+                className="px-4 py-2"
+                style={{ backgroundColor: '#6b7280', color: 'white' }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleQuickFill(parseInt(bulkValue) || 0)}
+                disabled={!bulkValue || parseInt(bulkValue) < 0 || parseInt(bulkValue) > workingDays}
+                className="px-4 py-2"
+                style={{ backgroundColor: '#362222', color: 'white' }}
+              >
+                Apply to Selected
+              </Button>
+            </div>
           </div>
         </div>
       )}
