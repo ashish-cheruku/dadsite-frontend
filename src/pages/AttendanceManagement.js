@@ -232,21 +232,6 @@ const AttendanceManagement = () => {
     }
   }, [pendingChangesDebounced, autoSaveEnabled, handleAutoSave]);
 
-  // Auto-save function with useCallback to prevent infinite re-renders
-  const handleAutoSave = useCallback(async () => {
-    if (pendingChanges.size === 0) return;
-    
-    try {
-      const changesToSave = Array.from(pendingChanges.entries());
-      await handleBulkAttendanceUpdate(changesToSave);
-      setPendingChanges(new Map());
-      setLastSaveTime(new Date());
-    } catch (err) {
-      console.error('Auto-save failed:', err);
-      // Don't clear pending changes on failure, allow retry
-    }
-  }, [pendingChanges, handleBulkAttendanceUpdate]);
-
   // Bulk attendance update function with useCallback
   const handleBulkAttendanceUpdate = useCallback(async (attendanceUpdates) => {
     try {
@@ -322,7 +307,22 @@ const AttendanceManagement = () => {
     } finally {
       setIsBulkUpdating(false);
     }
-  }, [workingDays, debouncedAcademicYear, debouncedMonth, debouncedYear, debouncedGroup, debouncedMedium, getCacheKey, setDataCache, setSafeError, setError]);
+  }, [workingDays, debouncedAcademicYear, debouncedMonth, debouncedYear, debouncedGroup, debouncedMedium, getCacheKey]);
+
+  // Auto-save function with useCallback to prevent infinite re-renders
+  const handleAutoSave = useCallback(async () => {
+    if (pendingChanges.size === 0) return;
+    
+    try {
+      const changesToSave = Array.from(pendingChanges.entries());
+      await handleBulkAttendanceUpdate(changesToSave);
+      setPendingChanges(new Map());
+      setLastSaveTime(new Date());
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+      // Don't clear pending changes on failure, allow retry
+    }
+  }, [pendingChanges, handleBulkAttendanceUpdate]);
 
   // Enhanced attendance input change with auto-save tracking
   const handleAttendanceInputChange = (studentId, value) => {
