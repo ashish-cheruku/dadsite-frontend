@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext.js'; // Import ThemeProvider
 import Login from './pages/Login';
 // Register import is commented out as registration is disabled
 import Dashboard from './pages/Dashboard';
@@ -21,9 +22,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
+    <ThemeProvider> {/* Wrap Router with ThemeProvider */}
+      <Router>
+        <Routes>
+          {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         {/* Registration is disabled - redirect to login */}
@@ -147,9 +149,10 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         
         {/* Redirect any unknown routes to home */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </ThemeProvider> 
   );
 }
 
