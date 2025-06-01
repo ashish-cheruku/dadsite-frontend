@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
-import ThemeToggleButton from './ThemeToggleButton.js'; // Import ThemeToggleButton
 
 const Navbar = () => {
   const location = useLocation();
@@ -117,10 +116,6 @@ const Navbar = () => {
             <Link to="/contact" className={`text-gray-300 hover:text-white font-medium ${location.pathname === '/contact' ? 'text-white' : ''}`}>
               Contact Us
             </Link>
-            {/* Add ThemeToggleButton for desktop view */}
-            <div className="ml-4"> {/* Added margin for spacing */}
-              <ThemeToggleButton />
-            </div>
             
             {isAuthenticated ? (
               <>
@@ -205,10 +200,6 @@ const Navbar = () => {
             >
               Contact Us
             </Link>
-            {/* Add ThemeToggleButton for mobile view */}
-            <div className="py-2 flex justify-center border-b border-[#423F3E]">
-              <ThemeToggleButton />
-            </div>
             
             {isAuthenticated ? (
               <>
