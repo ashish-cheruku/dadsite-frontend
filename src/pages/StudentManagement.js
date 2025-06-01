@@ -585,8 +585,10 @@ const StudentManagement = () => {
         const examTypes = [
           { key: 'UT1', label: 'Unit Test 1' },
           { key: 'UT2', label: 'Unit Test 2' },
-          { key: 'HLY', label: 'Half Yearly' },
-          { key: 'PF', label: 'Pre-Final Exam' }
+          { key: 'UT3', label: 'Unit Test 3' },
+          { key: 'UT4', label: 'Unit Test 4' },
+          { key: 'HALF_YEARLY', label: 'Half Yearly' },
+          { key: 'FINAL', label: 'Final Exam' }
         ];
         // Get subjects for the group from the first exam or fallback to a default
         let groupSubjects = [];
@@ -625,7 +627,15 @@ const StudentManagement = () => {
 
         // Build exam table rows
         const examRows = examTypes.map(typeObj => {
-          const exam = (studentExams.exams || []).find(e => (e.exam_type || '').toUpperCase() === typeObj.key);
+          // More flexible exam type matching to handle different naming conventions
+          const exam = (studentExams.exams || []).find(e => {
+            const examType = (e.exam_type || '').toLowerCase().replace('-', '_');
+            const searchKey = typeObj.key.toLowerCase().replace('-', '_');
+            return examType === searchKey || 
+                   examType === searchKey.replace('_', '-') ||
+                   examType === typeObj.key.toLowerCase() ||
+                   (e.exam_type || '').toUpperCase() === typeObj.key;
+          });
           const row = [typeObj.label];
           let total = 0;
           groupSubjects.forEach(subj => {
