@@ -509,8 +509,8 @@ const AttendanceManagement = () => {
       }
       
       await attendanceService.setWorkingDays(
-        debouncedAcademicYear,
         debouncedMonth,
+        debouncedAcademicYear,
         newWorkingDays
       );
       
