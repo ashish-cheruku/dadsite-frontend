@@ -603,6 +603,23 @@ const StudentManagement = () => {
         }
         // Map short subject codes to full names (customize as needed)
         const subjectNameMap = {
+          english: 'English',
+          telugu_hindi: 'Telugu/Hindi',
+          math_a: 'Mathematics A',
+          math_b: 'Mathematics B',
+          physics: 'Physics',
+          chemistry: 'Chemistry',
+          botany: 'Botany',
+          zoology: 'Zoology',
+          political_science: 'Political Science',
+          economics: 'Economics',
+          commerce: 'Commerce',
+          history: 'History',
+          gfc: 'General Foundation Course',
+          voc1: 'Vocational Subject 1',
+          voc2: 'Vocational Subject 2',
+          voc3: 'Vocational Subject 3',
+          // Legacy mappings
           eng: 'English',
           tel: 'Telugu',
           mat: 'Mathematics',
@@ -638,13 +655,19 @@ const StudentManagement = () => {
           });
           const row = [typeObj.label];
           let total = 0;
+          let maxPossible = 0;
           groupSubjects.forEach(subj => {
             const mark = exam && exam.subjects && exam.subjects[subj] !== undefined ? exam.subjects[subj] : '';
             row.push(mark);
             if (typeof mark === 'number') total += mark;
           });
-          // Total
-          row.push(total > 0 ? total : '');
+          // Total with max possible marks
+          if (exam && exam.max_possible_marks) {
+            row.push(`${total}/${exam.max_possible_marks}`);
+            maxPossible = exam.max_possible_marks;
+          } else {
+            row.push(total > 0 ? total : '');
+          }
           // Percentage
           if (exam && typeof exam.percentage === 'number') {
             row.push(exam.percentage.toFixed(1) + '%');
@@ -739,7 +762,7 @@ const StudentManagement = () => {
         doc.text('Exam Records', 20, y);
         y += 4;
         const examTableHead = [
-          ['Exam', ...subjectFullNames, 'Total', 'Percentage']
+          ['Exam', ...subjectFullNames, 'Total/Max', 'Percentage']
         ];
         autoTable(doc, {
           startY: y,
@@ -1173,7 +1196,7 @@ const StudentManagement = () => {
                           </td>
                           <td className="px-3 py-4 whitespace-nowrap text-sm text-white">{exam.total_marks}</td>
                           <td className="px-3 py-4 whitespace-nowrap text-sm text-white">
-                            {Object.keys(exam.subjects).length * 100}
+                            {exam.max_possible_marks || (Object.keys(exam.subjects).length * 100)}
                           </td>
                           <td className={`px-3 py-4 whitespace-nowrap text-sm font-medium ${
                             exam.percentage >= 75 ? 'text-green-400' : 
@@ -1398,7 +1421,7 @@ const StudentManagement = () => {
                     <select
                       name="year"
                       value={currentStudent.year}
-                      onChange={(e) => handleStudentInputChange(e, false)}
+                    onChange={(e) => handleStudentInputChange(e, false)}
                       className="mt-1 block w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white focus:outline-none"
                       required
                     >

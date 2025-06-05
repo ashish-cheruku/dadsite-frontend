@@ -13,6 +13,7 @@ import StudentManagement from './pages/StudentManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
 import ExamManagement from './pages/ExamManagement';
 import ExamDetails from './pages/ExamDetails';
+import SubjectMarksConfig from './pages/SubjectMarksConfig';
 import Announcements from './pages/Announcements';
 import PermissionsManagement from './pages/PermissionsManagement';
 import Academic from './pages/Academic';
@@ -88,6 +89,16 @@ function App() {
         element={
           <ProtectedRoute requiredRole="principal">
             <PermissionsManagement />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Subject Marks Configuration - Principal only */}
+      <Route 
+        path="/subject-marks-config" 
+        element={
+          <ProtectedRoute requiredRole="principal">
+            <SubjectMarksConfig />
           </ProtectedRoute>
         } 
       />

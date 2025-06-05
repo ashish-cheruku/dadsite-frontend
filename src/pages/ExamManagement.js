@@ -17,6 +17,7 @@ const ExamManagement = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [examType, setExamType] = useState('');
   const [subjects, setSubjects] = useState([]);
+  const [subjectMarks, setSubjectMarks] = useState({});
   const [marks, setMarks] = useState({});
   const [success, setSuccess] = useState('');
   
@@ -87,7 +88,7 @@ const ExamManagement = () => {
         const data = await examService.getStudentExams(selectedStudent.id);
         setExamData(data);
         
-        // Get subjects for the student's group
+        // Initialize subjects and marks objects
         const subjectsData = await examService.getSubjectsForGroup(selectedStudent.group);
         setSubjects(subjectsData.subjects);
         
@@ -109,6 +110,29 @@ const ExamManagement = () => {
       fetchExams();
     }
   }, [selectedStudent]);
+
+  // Fetch subject marks for the selected exam type
+  useEffect(() => {
+    const fetchSubjectMarks = async () => {
+      if (!selectedStudent || !examType) return;
+      
+      try {
+        const subjectsData = await examService.getSubjectsForGroup(selectedStudent.group, examType);
+        setSubjectMarks(subjectsData.subject_marks || {});
+      } catch (err) {
+        console.error('Failed to fetch subject marks for exam type:', err);
+        // Fallback to default marks if specific exam type config not found
+        const subjectsData = await examService.getSubjectsForGroup(selectedStudent.group);
+        const defaultMarks = {};
+        subjectsData.subjects.forEach(subject => {
+          defaultMarks[subject] = 100; // Default fallback
+        });
+        setSubjectMarks(defaultMarks);
+      }
+    };
+
+    fetchSubjectMarks();
+  }, [selectedStudent, examType]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -149,12 +173,13 @@ const ExamManagement = () => {
   };
 
   const handleMarkChange = (subject, value) => {
-    // Ensure the mark is a valid number between 0-100
+    const maxMarks = subjectMarks[subject] || 100;
     const numValue = parseInt(value, 10);
+    
     if (isNaN(numValue) || numValue < 0) {
       value = 0;
-    } else if (numValue > 100) {
-      value = 100;
+    } else if (numValue > maxMarks) {
+      value = maxMarks;
     }
     
     setMarks({
@@ -586,25 +611,28 @@ const ExamManagement = () => {
                         </div>
                         
                         <div className="mb-4">
-                          <h4 className="text-white mb-2">Subject Marks (0-100)</h4>
+                          <h4 className="text-white mb-2">Subject Marks</h4>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {subjects.map((subject) => (
-                              <div key={subject} className="mb-2">
-                                <label className="block text-gray-300 mb-1 capitalize">
-                                  {subject.replace('_', '/')}
-                                </label>
-                                <input 
-                                  type="number" 
-                                  className="w-full p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded"
-                                  min="0"
-                                  max="100"
-                                  value={marks[subject]}
-                                  onChange={(e) => handleMarkChange(subject, e.target.value)}
-                                  required
-                                />
-                              </div>
-                            ))}
+                            {subjects.map((subject) => {
+                              const maxMarks = subjectMarks[subject] || 100;
+                              return (
+                                <div key={subject} className="mb-2">
+                                  <label className="block text-gray-300 mb-1 capitalize">
+                                    {subject.replace('_', '/')} (Max: {maxMarks})
+                                  </label>
+                                  <input 
+                                    type="number" 
+                                    className="w-full p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded"
+                                    min="0"
+                                    max={maxMarks}
+                                    value={marks[subject]}
+                                    onChange={(e) => handleMarkChange(subject, e.target.value)}
+                                    required
+                                  />
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                         
@@ -643,7 +671,12 @@ const ExamManagement = () => {
                           {examData.exams.map((exam) => (
                             <tr key={exam.id} className="border-b border-[#423F3E] hover:bg-[#362222]">
                               <td className="px-4 py-3 text-gray-300">{formatExamType(exam.exam_type)}</td>
-                              <td className="px-4 py-3 text-gray-300">{exam.total_marks}</td>
+                              <td className="px-4 py-3 text-gray-300">
+                                {exam.total_marks}
+                                {exam.max_possible_marks && (
+                                  <span className="text-gray-400">/{exam.max_possible_marks}</span>
+                                )}
+                              </td>
                               <td className="px-4 py-3 text-gray-300">{exam.percentage.toFixed(2)}%</td>
                               <td className="px-4 py-3 text-gray-300">
                                 <div className="flex space-x-2">

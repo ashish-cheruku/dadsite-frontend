@@ -316,10 +316,14 @@ export const announcementService = {
 
 // Exam management service
 export const examService = {
-  // Get subjects for a specific group
-  getSubjectsForGroup: async (group) => {
+  // Get subjects for a specific group with optional exam type
+  getSubjectsForGroup: async (group, examType = null) => {
     try {
-      const response = await api.get(`/exams/subjects/${group}`);
+      let url = `/exams/subjects/${group}`;
+      if (examType) {
+        url += `?exam_type=${examType}`;
+      }
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : { detail: 'Network error' };
@@ -404,6 +408,69 @@ export const examService = {
     try {
       await api.delete(`/exams/${examId}`);
       return true;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  }
+};
+
+// Subject marks configuration service (Principal only)
+export const subjectMarksConfigService = {
+  // Get all subject marks configurations
+  getAllConfigs: async () => {
+    try {
+      const response = await api.get('/subject-marks-config');
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Get subject marks configuration for a specific group
+  getConfig: async (group) => {
+    try {
+      const response = await api.get(`/subject-marks-config/${group}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Get marks for a specific group and exam type
+  getExamConfig: async (group, examType) => {
+    try {
+      const response = await api.get(`/subject-marks-config/${group}/${examType}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Create or update subject marks configuration for a group
+  createOrUpdateConfig: async (group, configData) => {
+    try {
+      const response = await api.post(`/subject-marks-config/${group}`, configData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Update subject marks configuration for a group
+  updateConfig: async (group, configData) => {
+    try {
+      const response = await api.put(`/subject-marks-config/${group}`, configData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Initialize default configurations for all groups
+  initializeDefaults: async () => {
+    try {
+      const response = await api.post('/subject-marks-config/initialize');
+      return response.data;
     } catch (error) {
       throw error.response ? error.response.data : { detail: 'Network error' };
     }

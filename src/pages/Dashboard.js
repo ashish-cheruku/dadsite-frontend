@@ -119,6 +119,11 @@ const Dashboard = () => {
                     Manage Permissions
                   </button>
                 </Link>
+                <Link to="/subject-marks-config" className="block w-full">
+                  <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
+                    Subject Marks Config
+                  </button>
+                </Link>
               </div>
             </div>
             

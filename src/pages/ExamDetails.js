@@ -11,6 +11,7 @@ const ExamDetails = () => {
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [marks, setMarks] = useState({});
+  const [subjectMarks, setSubjectMarks] = useState({});
   const [success, setSuccess] = useState('');
   
   const navigate = useNavigate();
@@ -22,6 +23,10 @@ const ExamDetails = () => {
         const data = await examService.getExam(examId);
         setExam(data);
         setMarks(data.subjects);
+        
+        // Get subject marks configuration for this group and exam type
+        const subjectsData = await examService.getSubjectsForGroup(data.group, data.exam_type);
+        setSubjectMarks(subjectsData.subject_marks || {});
       } catch (err) {
         setError('Failed to fetch exam details');
         console.error(err);
@@ -48,12 +53,13 @@ const ExamDetails = () => {
   };
 
   const handleMarkChange = (subject, value) => {
-    // Ensure the mark is a valid number between 0-100
+    const maxMarks = subjectMarks[subject] || 100;
     const numValue = parseInt(value, 10);
+    
     if (isNaN(numValue) || numValue < 0) {
       value = 0;
-    } else if (numValue > 100) {
-      value = 100;
+    } else if (numValue > maxMarks) {
+      value = maxMarks;
     }
     
     setMarks({
@@ -210,6 +216,9 @@ const ExamDetails = () => {
                   <div>
                     <span className="text-gray-400">Total Marks:</span>
                     <span className="ml-2 text-white">{exam.total_marks}</span>
+                    {exam.max_possible_marks && (
+                      <span className="text-gray-400">/{exam.max_possible_marks}</span>
+                    )}
                   </div>
                   <div>
                     <span className="text-gray-400">Percentage:</span>
@@ -231,22 +240,25 @@ const ExamDetails = () => {
               {editMode ? (
                 <form onSubmit={handleSubmit}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {Object.entries(marks).map(([subject, mark]) => (
-                      <div key={subject} className="bg-[#362222] p-3 rounded">
-                        <label className="block text-gray-300 mb-1 capitalize">
-                          {subject.replace('_', '/')}
-                        </label>
-                        <input 
-                          type="number" 
-                          className="w-full p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded"
-                          min="0"
-                          max="100"
-                          value={mark}
-                          onChange={(e) => handleMarkChange(subject, e.target.value)}
-                          required
-                        />
-                      </div>
-                    ))}
+                    {Object.entries(marks).map(([subject, mark]) => {
+                      const maxMarks = subjectMarks[subject] || 100;
+                      return (
+                        <div key={subject} className="bg-[#362222] p-3 rounded">
+                          <label className="block text-gray-300 mb-1 capitalize">
+                            {subject.replace('_', '/')} (Max: {maxMarks})
+                          </label>
+                          <input 
+                            type="number" 
+                            className="w-full p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded"
+                            min="0"
+                            max={maxMarks}
+                            value={mark}
+                            onChange={(e) => handleMarkChange(subject, e.target.value)}
+                            required
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                   
                   <div className="flex justify-end">
@@ -261,12 +273,15 @@ const ExamDetails = () => {
                 </form>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(exam.subjects).map(([subject, mark]) => (
-                    <div key={subject} className="bg-[#362222] p-3 rounded flex justify-between">
-                      <span className="text-gray-300 capitalize">{subject.replace('_', '/')}</span>
-                      <span className="text-white font-medium">{mark}/100</span>
-                    </div>
-                  ))}
+                  {Object.entries(exam.subjects).map(([subject, mark]) => {
+                    const maxMarks = subjectMarks[subject] || 100;
+                    return (
+                      <div key={subject} className="bg-[#362222] p-3 rounded flex justify-between">
+                        <span className="text-gray-300 capitalize">{subject.replace('_', '/')}</span>
+                        <span className="text-white font-medium">{mark}/{maxMarks}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
