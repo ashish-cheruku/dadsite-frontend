@@ -18,6 +18,7 @@ import Announcements from './pages/Announcements';
 import PermissionsManagement from './pages/PermissionsManagement';
 import Academic from './pages/Academic';
 import Contact from './pages/Contact';
+import Developer from './pages/Developer';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -156,6 +157,9 @@ function App() {
       {/* Placeholder routes for navigation menu items */}
       <Route path="/academic" element={<Academic />} />
       <Route path="/contact" element={<Contact />} />
+      
+      {/* Developer page */}
+      <Route path="/developer" element={<Developer />} />
       
       {/* Redirect any unknown routes to home */}
         <Route path="*" element={<Navigate to="/" />} />
