@@ -64,12 +64,11 @@ const Developer = () => {
             <h2 className="text-3xl font-bold mb-6 text-center">About</h2>
             <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
               <p className="text-gray-300 leading-relaxed">
-                I am currently a student at the Birla Institute of Technology and Science, Pilani, pursuing MSc Economics and BE Manufacturing. 
-                I was a DevOps Engineer at Smarttrak.ai, where I gained valuable experience in cloud infrastructure, automation, and CI/CD pipelines 
-                using Microsoft Azure and AWS platforms. I am proficient in Python, JavaScript/TypeScript, and backend frameworks like Node.js, 
+                I am currently a student at the Birla Institute of Technology and Science, Pilani, pursuing MSc Economics and BE Manufacturing and DevOps Engineer at Smarttrak AI. I am proficient in cloud infrastructure, automation, and CI/CD pipelines 
+                using Microsoft Azure and AWS platforms ,Python, JavaScript/TypeScript, and backend frameworks like Node.js, 
                 Express.js, and FastAPI, with extensive database experience including MongoDB, PostgreSQL, MySQL, and SQLite. My frontend development 
                 skills include React.js, Next.js, and TailwindCSS. I specialize in cloud DevOps practices, scalable backend system design, security 
-                implementation, and fine-tuning large language models (LLMs) for improved efficiency and accuracy. I am passionate about automating 
+                implementation additionally fine-tuning large language models (LLMs) for improved efficiency and accuracy. I am passionate about automating 
                 workflows and building robust, performant applications that meet modern business requirements.
               </p>
             </div>
