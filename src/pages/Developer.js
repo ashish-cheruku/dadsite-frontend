@@ -16,7 +16,6 @@ const Developer = () => {
                 AK
               </div>
               <h1 className="text-4xl font-bold mb-2">Ashish K Cheruku</h1>
-              <p className="text-xl text-gray-300 mb-2">DevOps Engineer at Smarttrak AI</p>
               <p className="text-lg text-gray-400">Karimnagar, Telangana, India</p>
             </div>
             
@@ -74,101 +73,7 @@ const Developer = () => {
             </div>
           </div>
 
-          {/* Experience Section */}
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold mb-6 text-center">Experience</h2>
-            <div className="space-y-6">
-              
-              {/* Current Role */}
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#362222] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">ST</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-white">DevOps Engineer</h3>
-                    <p className="text-gray-400 mb-2">Smarttrak AI</p>
-                    <p className="text-sm text-gray-500 mb-3">Mar 2025 - Present · 4 mos</p>
-                    <p className="text-sm text-gray-500 mb-3">Holly Springs, North Carolina, United States · Remote</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Python</span>
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Microsoft Azure</span>
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">+2 skills</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Backend Developer */}
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#362222] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">PE</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-white">Backend Developer</h3>
-                    <p className="text-gray-400 mb-2">Pyrotech Electronics Pvt Ltd · Internship</p>
-                    <p className="text-sm text-gray-500 mb-3">Apr 2024 - Jun 2024 · 3 mos</p>
-                    <p className="text-sm text-gray-500 mb-3">Hyderabad, Telangana, India</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Express.js</span>
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">MongoDB</span>
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">+4 skills</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Teaching Assistant */}
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#362222] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">BI</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-white">Teaching Assistant</h3>
-                    <p className="text-gray-400 mb-2">Birla Institute of Technology and Science, Pilani</p>
-                    <p className="text-sm text-gray-500 mb-3">May 2023 - Jul 2023 · 3 mos</p>
-                    <p className="text-sm text-gray-500 mb-3">Pilani, Rajasthan, India</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">React.js</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Project Intern */}
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#362222] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">DR</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-white">Project Intern</h3>
-                    <p className="text-gray-400 mb-2">Defence Research and Development Laboratory (DRDL) - DRDO · Internship</p>
-                    <p className="text-sm text-gray-500 mb-3">May 2023 - Jul 2023 · 3 mos</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Drive-Train Engineer */}
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#362222] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">IK</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-white">Drive-Train Engineer</h3>
-                    <p className="text-gray-400 mb-2">Inspired Karters Gravity</p>
-                    <p className="text-sm text-gray-500 mb-3">Jan 2022 - Jan 2023 · 1 yr 1 mo</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Autodesk Fusion 360</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Education Section */}
           <div className="mb-12">
@@ -203,88 +108,7 @@ const Developer = () => {
             </div>
           </div>
 
-          {/* Skills Section */}
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold mb-6 text-center">Skills</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <h3 className="text-lg font-semibold text-white mb-4">Microsoft Azure</h3>
-                <p className="text-sm text-gray-400">DevOps Engineer at Smarttrak AI</p>
-              </div>
 
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <h3 className="text-lg font-semibold text-white mb-4">Amazon Web Services (AWS)</h3>
-                <p className="text-sm text-gray-400">DevOps Engineer at Smarttrak AI</p>
-              </div>
-
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <h3 className="text-lg font-semibold text-white mb-4">Programming Languages</h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Python</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">JavaScript</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">TypeScript</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">C++</span>
-                </div>
-              </div>
-
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <h3 className="text-lg font-semibold text-white mb-4">Web Technologies</h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">React.js</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Node.js</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Next.js</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Express.js</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">TailwindCSS</span>
-                </div>
-              </div>
-
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <h3 className="text-lg font-semibold text-white mb-4">Databases</h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">MongoDB</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">PostgreSQL</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">MySQL</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">SQLite</span>
-                </div>
-              </div>
-
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E]">
-                <h3 className="text-lg font-semibold text-white mb-4">Other Tools</h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Fast API</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Prisma</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Autodesk Fusion 360</span>
-                  <span className="px-3 py-1 bg-[#423F3E] text-gray-300 text-sm rounded-full">Vercel</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Analytics Section */}
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold mb-6 text-center">Analytics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E] text-center">
-                <div className="text-3xl font-bold text-white mb-2">121</div>
-                <div className="text-gray-400 mb-2">Profile Views</div>
-                <p className="text-sm text-gray-500">Discover who's viewed your profile.</p>
-              </div>
-
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E] text-center">
-                <div className="text-3xl font-bold text-white mb-2">0</div>
-                <div className="text-gray-400 mb-2">Post Impressions</div>
-                <p className="text-sm text-gray-500">Start a post to increase engagement.</p>
-              </div>
-
-              <div className="bg-[#2B2B2B] p-6 rounded-lg border border-[#423F3E] text-center">
-                <div className="text-3xl font-bold text-white mb-2">35</div>
-                <div className="text-gray-400 mb-2">Search Appearances</div>
-                <p className="text-sm text-gray-500">See how often you appear in search results.</p>
-              </div>
-            </div>
-          </div>
 
           {/* Back to Home */}
           <div className="text-center">
