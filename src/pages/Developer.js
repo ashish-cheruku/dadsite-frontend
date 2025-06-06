@@ -89,7 +89,6 @@ const Developer = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-white">Birla Institute of Technology and Science, Pilani</h3>
-                    <p className="text-gray-400 mb-2">MSc Economics, BE Manufacturing</p>
                     <p className="text-sm text-gray-500">Oct 2021 - May 2026</p>
                   </div>
                 </div>
