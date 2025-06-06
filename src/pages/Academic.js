@@ -81,7 +81,7 @@ const Academic = () => {
                 <h3 className="text-xl font-medium text-white mb-3">Vocational Groups</h3>
                 <p className="text-gray-300 mb-3">Specialized skill-based education</p>
                 <ul className="list-disc list-inside text-gray-300 space-y-1 pl-2">
-                  <li>T&HM (Travel & Hospitality Management)</li>
+                  <li>T&HM (Tourism & Hospitality Management)</li>
                   <li>MPHW (Multi Purpose Health Worker)</li>
                   <li>OAS (Office Assistantship)</li>
                   <li>Practical training for direct employment</li>

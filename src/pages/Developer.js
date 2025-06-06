@@ -99,7 +99,7 @@ const Developer = () => {
                     <span className="text-white font-bold text-sm">SC</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-white">Sri Chaitanya College of Education</h3>
+                    <h3 className="text-xl font-semibold text-white">Sri Chaitanya Junior College</h3>
                     <p className="text-gray-400 mb-2">Intermediate education (11th & 12th)</p>
                     <p className="text-sm text-gray-500">Aug 2019 - Aug 2021</p>
                   </div>
