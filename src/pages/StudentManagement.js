@@ -195,6 +195,7 @@ const StudentManagement = () => {
       const allAttendance = {};
       
       // Use Promise.all to fetch all months concurrently instead of sequentially
+      console.log(`Fetching attendance for academic year: ${progressCardAcademicYear}`);
       const requests = months.map(month => 
         attendanceService.getStudentAttendance(
           studentId,
@@ -202,7 +203,7 @@ const StudentManagement = () => {
           month
         )
         .catch(error => {
-          console.error(`Error fetching attendance for ${month}:`, error);
+          console.error(`Error fetching attendance for ${month} (${progressCardAcademicYear}):`, error);
           // Return default values on error
           return { working_days: 0, days_present: 0, attendance_percentage: 0 };
         })
@@ -530,54 +531,29 @@ const StudentManagement = () => {
           allMonthsAttendance = {};
         }
 
-        // Get current date information
-        const now = new Date();
-        const currentMonth = now.getMonth(); // 0-based (0=Jan, 11=Dec)
-        const juneIndex = 5; // June is index 5 (0-based)
-        
-        // Parse selected academic year
+        // Simple logic: just include all months for any academic year
+        // Let the data availability determine what shows up
         const selectedAcademicYear = progressCardAcademicYear;
-        const academicYearParts = selectedAcademicYear.split('-').map(part => parseInt(part, 10));
-        
-        // Determine which months to include based on selected academic year and current month
-        let monthsToInclude = [];
-        
-        // For academic year (e.g., 2024-2025), include June-December of first year and January-May of second year
-        // But only up to the current month if we're in the current academic year
-        const isCurrentAcademicYear = (
-          (now.getFullYear() === academicYearParts[0] && currentMonth >= juneIndex) || 
-          (now.getFullYear() === academicYearParts[1] && currentMonth < juneIndex)
-        );
-        
-        if (isCurrentAcademicYear) {
-          // We're in the current academic year, so only include months up to the current month
-          if (currentMonth >= juneIndex) {
-            // Current month is June-December of the first year of academic year
-            monthsToInclude = months.slice(juneIndex, currentMonth + 1);
-          } else {
-            // Current month is January-May of the second year of academic year
-            const firstYearMonths = months.slice(juneIndex); // June-December of first year
-            const secondYearMonths = months.slice(0, currentMonth + 1); // January through current month of second year
-            monthsToInclude = [...firstYearMonths, ...secondYearMonths];
-          }
-        } else {
-          // Past academic year, include all months from June-May
-          const firstYearMonths = months.slice(juneIndex); // June-December of first year
-          const secondYearMonths = months.slice(0, juneIndex); // January-May of second year
-          monthsToInclude = [...firstYearMonths, ...secondYearMonths];
-        }
+        const monthsToInclude = months; // All 12 months
 
-        console.log('Months included in attendance calculation:', monthsToInclude);
+        console.log('=== ATTENDANCE CALCULATION ===');
         console.log('Selected academic year:', selectedAcademicYear);
+        console.log('Including all months:', monthsToInclude);
+        console.log('All months attendance data:', allMonthsAttendance);
+        console.log('=== END ===');
         
         // Aggregate attendance from all included months
         let totalWorkingDays = 0;
         let totalDaysPresent = 0;
+        console.log('=== MONTH BY MONTH BREAKDOWN ===');
         monthsToInclude.forEach(month => {
           const monthData = allMonthsAttendance[month] || { working_days: 0, days_present: 0 };
+          console.log(`${month}: working_days=${monthData.working_days || 0}, days_present=${monthData.days_present || 0}`);
           totalWorkingDays += monthData.working_days || 0;
           totalDaysPresent += monthData.days_present || 0;
         });
+        console.log(`Total: working_days=${totalWorkingDays}, days_present=${totalDaysPresent}`);
+        console.log('=== END MONTH BREAKDOWN ===');
         
         const overallPercentage = totalWorkingDays > 0 ? ((totalDaysPresent / totalWorkingDays) * 100).toFixed(1) : "0.0";
 
@@ -977,7 +953,7 @@ const StudentManagement = () => {
                 <div className="flex-1">
                   <label className="block text-gray-300 text-sm mb-1">Information</label>
                   <div className="text-xs text-gray-400 p-2 bg-[#171010] rounded-md border border-[#423F3E] h-[70px] overflow-y-auto">
-                    <p>The progress card will include attendance data from June to the current month for the selected academic year. If selecting a past academic year, data from June to May will be included.</p>
+                    <p>The progress card will include attendance data from all months that have data configured for the selected academic year.</p>
                   </div>
                 </div>
               </div>
