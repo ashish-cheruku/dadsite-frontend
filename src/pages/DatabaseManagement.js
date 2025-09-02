@@ -4,6 +4,9 @@ import { Button } from '../components/ui/button';
 import Navbar from '../components/Navbar';
 import { authService } from '../services/api';
 
+// Use the same API URL configuration as the rest of the app
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:1821';
+
 const DatabaseManagement = () => {
   const [user, setUser] = useState(null);
   const [dbStatus, setDbStatus] = useState(null);
@@ -32,7 +35,7 @@ const DatabaseManagement = () => {
         const token = localStorage.getItem('token');
         if (token) {
           try {
-            const dbResponse = await fetch('http://localhost:1821/api/database/status', {
+            const dbResponse = await fetch(`${API_URL}/api/database/status`, {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -62,7 +65,7 @@ const DatabaseManagement = () => {
     
     setSwitchingDb(true);
     try {
-      const response = await fetch('http://localhost:1821/api/database/switch', {
+      const response = await fetch(`${API_URL}/api/database/switch`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -75,7 +78,7 @@ const DatabaseManagement = () => {
 
       if (response.ok) {
         // Refresh database status
-        const statusResponse = await fetch('http://localhost:1821/api/database/status', {
+        const statusResponse = await fetch(`${API_URL}/api/database/status`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
@@ -106,7 +109,7 @@ const DatabaseManagement = () => {
       const token = localStorage.getItem('token');
       const newDualWriteState = !dbStatus?.dual_write_enabled;
       
-      const response = await fetch('http://localhost:1821/api/database/dual-write/toggle', {
+      const response = await fetch(`${API_URL}/api/database/dual-write/toggle`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -119,7 +122,7 @@ const DatabaseManagement = () => {
 
       if (response.ok) {
         // Refresh database status after successful toggle
-        const statusResponse = await fetch('http://localhost:1821/api/database/status', {
+        const statusResponse = await fetch(`${API_URL}/api/database/status`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
