@@ -96,6 +96,8 @@ const Dashboard = () => {
               </div>
             </div>
             
+
+            
             <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-6 mb-6">
               <h3 className="text-xl font-semibold mb-4 text-white">Administrative Actions</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -117,6 +119,11 @@ const Dashboard = () => {
                 <Link to="/permissions-management" className="block w-full">
                   <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
                     Manage Permissions
+                  </button>
+                </Link>
+                <Link to="/database-management" className="block w-full">
+                  <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
+                    Database Management
                   </button>
                 </Link>
                 <Link to="/subject-marks-config" className="block w-full">

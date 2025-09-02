@@ -14,6 +14,7 @@ import AttendanceManagement from './pages/AttendanceManagement';
 import ExamManagement from './pages/ExamManagement';
 import ExamDetails from './pages/ExamDetails';
 import SubjectMarksConfig from './pages/SubjectMarksConfig';
+import DatabaseManagement from './pages/DatabaseManagement';
 import Announcements from './pages/Announcements';
 import PermissionsManagement from './pages/PermissionsManagement';
 import Academic from './pages/Academic';
@@ -100,6 +101,16 @@ function App() {
         element={
           <ProtectedRoute requiredRole="principal">
             <SubjectMarksConfig />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Database Management - Principal only */}
+      <Route 
+        path="/database-management" 
+        element={
+          <ProtectedRoute requiredRole="principal">
+            <DatabaseManagement />
           </ProtectedRoute>
         } 
       />
