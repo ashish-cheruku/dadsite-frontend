@@ -35,7 +35,8 @@ const AttendanceManagement = () => {
   const [selectedGroup, setSelectedGroup] = useState('mpc');
   const [selectedMedium, setSelectedMedium] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('january');
-  const [academicYear, setAcademicYear] = useState('2024-2025');
+  const [academicYear, setAcademicYear] = useState('2025-26');
+  const [availableAcademicYears, setAvailableAcademicYears] = useState([]);
   
   // Debounced filter values to reduce API calls
   const debouncedYear = useDebounce(selectedYear, 300);
@@ -100,6 +101,52 @@ const AttendanceManagement = () => {
     };
     
     getCurrentUser();
+  }, []);
+
+  // Fetch available academic years
+  useEffect(() => {
+    const fetchAcademicYears = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:1821'}/api/academic-years/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const years = await response.json();
+          setAvailableAcademicYears(years);
+          
+          // Set current academic year to the first available year if not already set
+          if (years.length > 0) {
+            const currentYear = years.find(year => year.is_current) || years[0];
+            setAcademicYear(currentYear.year);
+          }
+        } else {
+          console.error('Failed to fetch academic years');
+          // Fallback to default years
+          const fallbackYears = [
+            {year: '2025-26', is_current: true, is_active: true},
+            {year: '2026-27', is_current: false, is_active: true},
+            {year: '2027-28', is_current: false, is_active: true}
+          ];
+          setAvailableAcademicYears(fallbackYears);
+        }
+      } catch (error) {
+        console.error('Error fetching academic years:', error);
+        // Fallback to default years
+        const fallbackYears = [
+          {year: '2025-26', is_current: true, is_active: true},
+          {year: '2026-27', is_current: false, is_active: true},
+          {year: '2027-28', is_current: false, is_active: true}
+        ];
+        setAvailableAcademicYears(fallbackYears);
+      }
+    };
+    
+    fetchAcademicYears();
   }, []);
   
   const fetchClassAttendance = useCallback(async () => {
@@ -1022,8 +1069,11 @@ const AttendanceManagement = () => {
                   className="w-full px-3 py-2 bg-[#171010] border border-[#423F3E] rounded-md text-white"
                   disabled={loading}
                 >
-                  <option value="2024-2025">2024-2025</option>
-                  <option value="2025-2026">2025-2026</option>
+                  {availableAcademicYears.map((year) => (
+                    <option key={year.year} value={year.year}>
+                      {year.year} {year.is_current ? '(Current)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
