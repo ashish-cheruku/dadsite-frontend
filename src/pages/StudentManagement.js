@@ -127,6 +127,8 @@ const StudentManagement = () => {
       if (year !== null) filters.year = year;
       if (group !== null) filters.group = group;
       if (medium !== null) filters.medium = medium;
+      // Add a high limit to ensure we get all students, not just the default 100
+      filters.limit = 10000;
       
       const data = await studentService.getAllStudents(filters);
       

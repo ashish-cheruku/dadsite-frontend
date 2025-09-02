@@ -40,7 +40,8 @@ const ExamManagement = () => {
     const fetchStudents = async () => {
       try {
         setLoading(true);
-        const data = await studentService.getAllStudents();
+        // Pass a high limit to ensure we get all students, not just the default 100
+        const data = await studentService.getAllStudents({ limit: 10000 });
         setStudents(data);
         setFilteredStudents(data);
       } catch (err) {
