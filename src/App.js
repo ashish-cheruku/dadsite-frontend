@@ -8,6 +8,7 @@ import Faculty from './pages/Faculty';
 import Gallery from './pages/Gallery';
 import UserManagement from './pages/UserManagement';
 import AnnouncementManagement from './pages/AnnouncementManagement';
+import CollegeAnnouncementManagement from './pages/CollegeAnnouncementManagement';
 import StaffManagement from './pages/StaffManagement';
 import StudentManagement from './pages/StudentManagement';
 import AttendanceManagement from './pages/AttendanceManagement';
@@ -71,6 +72,16 @@ function App() {
         element={
           <ProtectedRoute requiredRole="principal">
             <AnnouncementManagement />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* College Announcement Management - Principal only */}
+      <Route 
+        path="/college-announcement-management" 
+        element={
+          <ProtectedRoute requiredRole="principal">
+            <CollegeAnnouncementManagement />
           </ProtectedRoute>
         } 
       />

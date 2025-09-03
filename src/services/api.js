@@ -314,6 +314,53 @@ export const announcementService = {
   }
 };
 
+// College Announcement service (Staff and Principal only)
+export const collegeAnnouncementService = {
+  // Get all college announcements (Staff and Principal only)
+  getAllCollegeAnnouncements: async () => {
+    try {
+      const response = await api.get('/college-announcements');
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Create new college announcement (Principal only)
+  createCollegeAnnouncement: async (title, content, link = null, link_text = null, priority = 'medium') => {
+    try {
+      const response = await api.post('/college-announcements', { title, content, link, link_text, priority });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Update existing college announcement (Principal only)
+  updateCollegeAnnouncement: async (id, title, content, link = null, link_text = null, priority = null, is_active = null) => {
+    try {
+      const updateData = { title, content, link, link_text };
+      if (priority !== null) updateData.priority = priority;
+      if (is_active !== null) updateData.is_active = is_active;
+      
+      const response = await api.put(`/college-announcements/${id}`, updateData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Delete college announcement (Principal only)
+  deleteCollegeAnnouncement: async (id) => {
+    try {
+      await api.delete(`/college-announcements/${id}`);
+      return true;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  }
+};
+
 // Exam management service
 export const examService = {
   // Get subjects for a specific group with optional exam type

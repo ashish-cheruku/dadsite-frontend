@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { announcementService } from '../services/api';
+import { announcementService, collegeAnnouncementService } from '../services/api';
 import { authService } from '../services/api';
 import { ErrorDisplay, setSafeError } from '../utils/errorHandler';
 
 const Home = () => {
   const [announcements, setAnnouncements] = useState([]);
+  const [collegeAnnouncements, setCollegeAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [collegeLoading, setCollegeLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [collegeError, setCollegeError] = useState(null);
   const isPrincipal = authService.hasRole('principal');
+  const isStaff = authService.hasRole('staff') || authService.hasRole('principal');
 
   useEffect(() => {
     // Fetch announcements when component mounts
@@ -26,8 +30,28 @@ const Home = () => {
       }
     };
 
+    // Fetch college announcements if user is staff or principal
+    const fetchCollegeAnnouncements = async () => {
+      if (!isStaff) {
+        setCollegeLoading(false);
+        return;
+      }
+
+      try {
+        setCollegeLoading(true);
+        const data = await collegeAnnouncementService.getAllCollegeAnnouncements();
+        setCollegeAnnouncements(data);
+      } catch (err) {
+        console.error('Error fetching college announcements:', err);
+        setSafeError(setCollegeError, err, 'Failed to load college announcements');
+      } finally {
+        setCollegeLoading(false);
+      }
+    };
+
     fetchAnnouncements();
-  }, []);
+    fetchCollegeAnnouncements();
+  }, [isStaff]);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#171010]">
@@ -214,61 +238,161 @@ const Home = () => {
                   <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-bold text-white">Announcements</h2>
                     {isPrincipal && (
-                      <Link 
-                        to="/announcement-management" 
-                        className="text-white bg-[#423F3E] px-3 py-1 rounded-md text-sm hover:bg-[#362222]"
-                      >
-                        Manage
-                      </Link>
+                      <div className="relative group">
+                        <button className="text-white bg-[#423F3E] px-3 py-1 rounded-md text-sm hover:bg-[#362222] flex items-center">
+                          Manage
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        <div className="absolute right-0 mt-2 w-48 bg-[#2B2B2B] border border-[#423F3E] rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                          <Link 
+                            to="/announcement-management" 
+                            className="block px-4 py-2 text-white hover:bg-[#362222] rounded-t-md"
+                          >
+                            Public Announcements
+                          </Link>
+                          <Link 
+                            to="/college-announcement-management" 
+                            className="block px-4 py-2 text-white hover:bg-[#362222] rounded-b-md"
+                          >
+                            College Announcements
+                          </Link>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
                 <div className="p-4">
                   <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                    {loading ? (
-                      <div className="text-center py-4">
-                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>
-                        <p className="text-gray-300 mt-2">Loading announcements...</p>
+                    {/* General Announcements */}
+                    <div>
+                      <div className="flex items-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                        </svg>
+                        <h3 className="text-lg font-semibold text-white">General</h3>
                       </div>
-                    ) : error ? (
-                      <ErrorDisplay error={error} className="alert alert-danger" />
-                    ) : announcements.length === 0 ? (
-                      <div className="text-center py-4">
-                        <p className="text-gray-300">No announcements available</p>
-                      </div>
-                    ) : (
-                      announcements.map((announcement) => (
-                        <div key={announcement.id} className="border-b border-[#423F3E] pb-4">
-                          <h3 className="text-lg font-semibold text-white">{announcement.title}</h3>
-                          <p className="text-gray-300 text-sm mb-2">
-                            {announcement.content}
-                          </p>
-                          {announcement.link && (
-                            <div className="mb-2">
-                              <a 
-                                href={announcement.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-400 hover:text-blue-300 text-sm flex items-center"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                </svg>
-                                {announcement.link_text || "Important Link"}
-                              </a>
-                            </div>
-                          )}
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-gray-400">
-                              {new Date(announcement.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
+                      
+                      {loading ? (
+                        <div className="text-center py-4">
+                          <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>
+                          <p className="text-gray-300 mt-2">Loading announcements...</p>
                         </div>
-                      ))
+                      ) : error ? (
+                        <ErrorDisplay error={error} className="alert alert-danger" />
+                      ) : announcements.length === 0 ? (
+                        <div className="text-center py-4 bg-[#362222] rounded-lg">
+                          <p className="text-gray-300">No general announcements available</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {announcements.map((announcement) => (
+                            <div key={announcement.id} className="border-b border-[#423F3E] pb-3">
+                              <h4 className="text-base font-semibold text-white">{announcement.title}</h4>
+                              <p className="text-gray-300 text-sm mb-2 line-clamp-2">
+                                {announcement.content}
+                              </p>
+                              {announcement.link && (
+                                <div className="mb-2">
+                                  <a 
+                                    href={announcement.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                    </svg>
+                                    {announcement.link_text || "Important Link"}
+                                  </a>
+                                </div>
+                              )}
+                              <span className="text-xs text-gray-400">
+                                {new Date(announcement.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* College Announcements - Only visible to staff and principal */}
+                    {isStaff && (
+                      <div className="mt-6 pt-4 border-t border-[#423F3E]">
+                        <div className="flex items-center mb-3">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                          <h3 className="text-lg font-semibold text-white">College</h3>
+                          <span className="ml-2 px-2 py-1 text-xs bg-gray-700/50 text-gray-300 rounded-full border border-gray-600">
+                            Staff Only
+                          </span>
+                        </div>
+                        
+                        {collegeLoading ? (
+                          <div className="text-center py-4">
+                            <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-gray-400"></div>
+                            <p className="text-gray-300 mt-2">Loading college announcements...</p>
+                          </div>
+                        ) : collegeError ? (
+                          <ErrorDisplay error={collegeError} className="alert alert-danger" />
+                        ) : collegeAnnouncements.length === 0 ? (
+                          <div className="text-center py-4 bg-[#2B2B2B] rounded-lg border border-[#423F3E]">
+                            <p className="text-gray-300">No college announcements available</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {collegeAnnouncements.slice(0, 3).map((announcement) => (
+                              <div key={announcement.id} className="bg-[#2B2B2B] p-3 rounded-lg border border-[#423F3E] mb-3">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="text-base font-semibold text-white flex-1 pr-2">{announcement.title}</h4>
+                                  <span className={`px-2 py-1 text-xs rounded-full font-medium border ${
+                                    announcement.priority === 'high' 
+                                      ? 'bg-red-900/50 text-red-300 border-red-700' 
+                                      : announcement.priority === 'low'
+                                      ? 'bg-gray-900/50 text-gray-300 border-gray-700'
+                                      : 'bg-gray-800/50 text-gray-300 border-gray-600'
+                                  }`}>
+                                    {announcement.priority?.toUpperCase() || 'MED'}
+                                  </span>
+                                </div>
+                                <p className="text-gray-300 text-sm mb-2 line-clamp-2">
+                                  {announcement.content}
+                                </p>
+                                {announcement.link && (
+                                  <div className="mb-2">
+                                    <a 
+                                      href={announcement.link}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                      </svg>
+                                      {announcement.link_text || "Important Link"}
+                                    </a>
+                                  </div>
+                                )}
+                                <div className="flex justify-between items-center text-xs text-gray-400">
+                                  <span>{new Date(announcement.created_at).toLocaleDateString()}</span>
+                                  <span className="text-gray-300">By: {announcement.created_by}</span>
+                                </div>
+                              </div>
+                            ))}
+                            {collegeAnnouncements.length > 3 && (
+                              <p className="text-center text-gray-400 text-sm">
+                                +{collegeAnnouncements.length - 3} more college announcements
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                   
-                  {announcements.length > 0 && (
+                  {(announcements.length > 0 || (isStaff && collegeAnnouncements.length > 0)) && (
                     <div className="mt-4 text-center">
                       <Link to="/announcements" className="text-white bg-[#362222] px-4 py-2 rounded-md inline-block hover:bg-[#423F3E]">
                         View All Announcements
