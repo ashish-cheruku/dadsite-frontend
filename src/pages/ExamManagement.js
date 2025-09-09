@@ -19,6 +19,7 @@ const ExamManagement = () => {
   const [subjects, setSubjects] = useState([]);
   const [subjectMarks, setSubjectMarks] = useState({});
   const [marks, setMarks] = useState({});
+  const [absentSubjects, setAbsentSubjects] = useState({});
   const [success, setSuccess] = useState('');
   
   // Filter states
@@ -95,10 +96,13 @@ const ExamManagement = () => {
         
         // Initialize marks object with empty values
         const initialMarks = {};
+        const initialAbsent = {};
         subjectsData.subjects.forEach(subject => {
           initialMarks[subject] = '';
+          initialAbsent[subject] = false;
         });
         setMarks(initialMarks);
+        setAbsentSubjects(initialAbsent);
       } catch (err) {
         setError('Failed to fetch exam data');
         console.error(err);
@@ -162,12 +166,15 @@ const ExamManagement = () => {
     setFormVisible(true);
     setExamType('');
     
-    // Reset marks
+    // Reset marks and absent subjects
     const initialMarks = {};
+    const initialAbsent = {};
     subjects.forEach(subject => {
       initialMarks[subject] = '';
+      initialAbsent[subject] = false;
     });
     setMarks(initialMarks);
+    setAbsentSubjects(initialAbsent);
     
     setSuccess('');
     setError('');
@@ -189,6 +196,21 @@ const ExamManagement = () => {
     });
   };
 
+  const handleAbsentChange = (subject, isAbsent) => {
+    setAbsentSubjects({
+      ...absentSubjects,
+      [subject]: isAbsent
+    });
+    
+    // If marking as absent, set marks to 0
+    if (isAbsent) {
+      setMarks({
+        ...marks,
+        [subject]: 0
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -197,10 +219,12 @@ const ExamManagement = () => {
       return;
     }
     
-    // Convert marks to integers
+    // Convert marks to integers and handle absent subjects
     const marksData = {};
+    const absentData = {};
     Object.entries(marks).forEach(([subject, mark]) => {
       marksData[subject] = mark === '' ? 0 : parseInt(mark, 10);
+      absentData[subject] = absentSubjects[subject] || false;
     });
     
     try {
@@ -213,7 +237,8 @@ const ExamManagement = () => {
         year: selectedStudent.year,
         group: selectedStudent.group,
         exam_type: examType,
-        subjects: marksData
+        subjects: marksData,
+        absent_subjects: absentData
       };
       
       await examService.createExam(examData);
@@ -617,20 +642,36 @@ const ExamManagement = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {subjects.map((subject) => {
                               const maxMarks = subjectMarks[subject] || 100;
+                              const isAbsent = absentSubjects[subject] || false;
                               return (
                                 <div key={subject} className="mb-2">
                                   <label className="block text-gray-300 mb-1 capitalize">
                                     {subject.replace('_', '/')} (Max: {maxMarks})
                                   </label>
-                                  <input 
-                                    type="number" 
-                                    className="w-full p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded"
-                                    min="0"
-                                    max={maxMarks}
-                                    value={marks[subject]}
-                                    onChange={(e) => handleMarkChange(subject, e.target.value)}
-                                    required
-                                  />
+                                  <div className="flex items-center space-x-2">
+                                    <input 
+                                      type="number" 
+                                      className={`flex-1 p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded ${isAbsent ? 'opacity-50' : ''}`}
+                                      min="0"
+                                      max={maxMarks}
+                                      value={marks[subject]}
+                                      onChange={(e) => handleMarkChange(subject, e.target.value)}
+                                      disabled={isAbsent}
+                                      required={!isAbsent}
+                                    />
+                                    <div className="flex items-center">
+                                      <input
+                                        type="checkbox"
+                                        id={`absent-${subject}`}
+                                        className="mr-1 w-4 h-4 text-red-600 bg-[#423F3E] border-[#544E4E] rounded focus:ring-red-500"
+                                        checked={isAbsent}
+                                        onChange={(e) => handleAbsentChange(subject, e.target.checked)}
+                                      />
+                                      <label htmlFor={`absent-${subject}`} className="text-sm text-gray-300">
+                                        Absent
+                                      </label>
+                                    </div>
+                                  </div>
                                 </div>
                               );
                             })}

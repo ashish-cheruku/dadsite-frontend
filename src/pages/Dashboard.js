@@ -100,10 +100,15 @@ const Dashboard = () => {
             
             <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-6 mb-6">
               <h3 className="text-xl font-semibold mb-4 text-white">Administrative Actions</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Link to="/user-management" className="block w-full">
                   <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
                     Manage Users & Roles
+                  </button>
+                </Link>
+                <Link to="/announcement-management" className="block w-full">
+                  <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
+                    Manage Announcements
                   </button>
                 </Link>
                 <Link to="/staff-management" className="block w-full">
@@ -124,44 +129,6 @@ const Dashboard = () => {
                 <Link to="/subject-marks-config" className="block w-full">
                   <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
                     Subject Marks Config
-                  </button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Announcement Management Section */}
-            <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-6 mb-6">
-              <h3 className="text-xl font-semibold mb-4 text-white flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                </svg>
-                Announcement Management
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Link to="/announcement-management" className="block w-full">
-                  <button className="w-full py-4 px-6 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300 text-left">
-                    <div className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                      </svg>
-                      <div>
-                        <div className="font-semibold">Public Announcements</div>
-                        <div className="text-sm text-gray-400">Manage announcements visible to everyone</div>
-                      </div>
-                    </div>
-                  </button>
-                </Link>
-                <Link to="/college-announcement-management" className="block w-full">
-                  <button className="w-full py-4 px-6 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300 text-left">
-                    <div className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <div>
-                        <div className="font-semibold">College Announcements</div>
-                        <div className="text-sm text-gray-400">Internal staff announcements with priority levels</div>
-                      </div>
-                    </div>
                   </button>
                 </Link>
               </div>
