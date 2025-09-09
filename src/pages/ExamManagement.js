@@ -202,11 +202,17 @@ const ExamManagement = () => {
       [subject]: isAbsent
     });
     
-    // If marking as absent, set marks to 0
+    // If marking as absent, set marks to "ABS"
     if (isAbsent) {
       setMarks({
         ...marks,
-        [subject]: 0
+        [subject]: "ABS"
+      });
+    } else {
+      // If unmarking absent, reset to empty string
+      setMarks({
+        ...marks,
+        [subject]: ""
       });
     }
   };
@@ -219,12 +225,17 @@ const ExamManagement = () => {
       return;
     }
     
-    // Convert marks to integers and handle absent subjects
+    // Convert marks and handle absent subjects
     const marksData = {};
     const absentData = {};
     Object.entries(marks).forEach(([subject, mark]) => {
-      marksData[subject] = mark === '' ? 0 : parseInt(mark, 10);
-      absentData[subject] = absentSubjects[subject] || false;
+      if (mark === "ABS" || absentSubjects[subject]) {
+        marksData[subject] = "ABS";
+        absentData[subject] = true;
+      } else {
+        marksData[subject] = mark === '' ? 0 : parseInt(mark, 10);
+        absentData[subject] = false;
+      }
     });
     
     try {
@@ -650,14 +661,15 @@ const ExamManagement = () => {
                                   </label>
                                   <div className="flex items-center space-x-2">
                                     <input 
-                                      type="number" 
+                                      type={isAbsent ? "text" : "number"}
                                       className={`flex-1 p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded ${isAbsent ? 'opacity-50' : ''}`}
-                                      min="0"
-                                      max={maxMarks}
+                                      min={isAbsent ? undefined : "0"}
+                                      max={isAbsent ? undefined : maxMarks}
                                       value={marks[subject]}
                                       onChange={(e) => handleMarkChange(subject, e.target.value)}
                                       disabled={isAbsent}
                                       required={!isAbsent}
+                                      readOnly={isAbsent}
                                     />
                                     <div className="flex items-center">
                                       <input

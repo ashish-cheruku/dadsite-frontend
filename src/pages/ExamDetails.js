@@ -53,6 +53,15 @@ const ExamDetails = () => {
   };
 
   const handleMarkChange = (subject, value) => {
+    // Allow "ABS" as a valid value
+    if (value === "ABS") {
+      setMarks({
+        ...marks,
+        [subject]: "ABS"
+      });
+      return;
+    }
+    
     const maxMarks = subjectMarks[subject] || 100;
     const numValue = parseInt(value, 10);
     
@@ -248,12 +257,11 @@ const ExamDetails = () => {
                             {subject.replace('_', '/')} (Max: {maxMarks})
                           </label>
                           <input 
-                            type="number" 
+                            type="text" 
                             className="w-full p-2 bg-[#423F3E] text-white border border-[#544E4E] rounded"
-                            min="0"
-                            max={maxMarks}
                             value={mark}
                             onChange={(e) => handleMarkChange(subject, e.target.value)}
+                            placeholder={`0-${maxMarks} or ABS`}
                             required
                           />
                         </div>
@@ -278,7 +286,9 @@ const ExamDetails = () => {
                     return (
                       <div key={subject} className="bg-[#362222] p-3 rounded flex justify-between">
                         <span className="text-gray-300 capitalize">{subject.replace('_', '/')}</span>
-                        <span className="text-white font-medium">{mark}/{maxMarks}</span>
+                        <span className={`font-medium ${mark === "ABS" ? "text-red-400" : "text-white"}`}>
+                          {mark === "ABS" ? "ABS" : `${mark}/${maxMarks}`}
+                        </span>
                       </div>
                     );
                   })}
