@@ -64,7 +64,7 @@ const DailyAttendance = () => {
       const token = localStorage.getItem('token');
       const today = new Date().toISOString().split('T')[0];
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/staff/attendance/${staffId}?start_date=${today}&end_date=${today}`, {
+      const response = await fetch(`${API_URL}/daily-attendance/staff/attendance/${staffId}?start_date=${today}&end_date=${today}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -91,7 +91,7 @@ const DailyAttendance = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/class/assignments?staff_id=${staffId}`, {
+      const response = await fetch(`${API_URL}/daily-attendance/class/assignments?staff_id=${staffId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -137,7 +137,7 @@ const DailyAttendance = () => {
       let response;
       if (todayAttendance) {
         // Update existing attendance
-        response = await fetch(`${API_URL}/api/daily-attendance/staff/attendance/${todayAttendance.id}`, {
+        response = await fetch(`${API_URL}/daily-attendance/staff/attendance/${todayAttendance.id}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -152,7 +152,7 @@ const DailyAttendance = () => {
         });
       } else {
         // Create new attendance
-        response = await fetch(`${API_URL}/api/daily-attendance/staff/attendance`, {
+        response = await fetch(`${API_URL}/daily-attendance/staff/attendance`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -204,7 +204,7 @@ const DailyAttendance = () => {
         remarks: classRemarks[assignmentId]
       };
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/class/attendance`, {
+      const response = await fetch(`${API_URL}/daily-attendance/class/attendance`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

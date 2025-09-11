@@ -73,7 +73,7 @@ const DailyAttendanceAdmin = () => {
       const token = localStorage.getItem('token');
       
       // Fetch users with staff role
-      const response = await fetch(`${API_URL}/api/users?role=staff`, {
+      const response = await fetch(`${API_URL}/users?role=staff`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -93,7 +93,7 @@ const DailyAttendanceAdmin = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/class/assignments`, {
+      const response = await fetch(`${API_URL}/daily-attendance/class/assignments`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -113,7 +113,7 @@ const DailyAttendanceAdmin = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/staff/attendance/pending`, {
+      const response = await fetch(`${API_URL}/daily-attendance/staff/attendance/pending`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -133,7 +133,7 @@ const DailyAttendanceAdmin = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/dashboard/principal`, {
+      const response = await fetch(`${API_URL}/daily-attendance/dashboard/principal`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -166,7 +166,7 @@ const DailyAttendanceAdmin = () => {
         total_students: parseInt(newAssignment.total_students, 10)
       };
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/class/assignments`, {
+      const response = await fetch(`${API_URL}/daily-attendance/class/assignments`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -208,7 +208,7 @@ const DailyAttendanceAdmin = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/staff/attendance/${attendanceId}/approve`, {
+      const response = await fetch(`${API_URL}/daily-attendance/staff/attendance/${attendanceId}/approve`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -244,7 +244,7 @@ const DailyAttendanceAdmin = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/api/daily-attendance/class/assignments/${assignmentId}`, {
+      const response = await fetch(`${API_URL}/daily-attendance/class/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
