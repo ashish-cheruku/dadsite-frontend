@@ -16,6 +16,8 @@ import ExamManagement from './pages/ExamManagement';
 import ExamDetails from './pages/ExamDetails';
 import SubjectMarksConfig from './pages/SubjectMarksConfig';
 import DatabaseManagement from './pages/DatabaseManagement';
+import DailyAttendance from './pages/DailyAttendance';
+import DailyAttendanceAdmin from './pages/DailyAttendanceAdmin';
 import Announcements from './pages/Announcements';
 import PermissionsManagement from './pages/PermissionsManagement';
 import Academic from './pages/Academic';
@@ -125,6 +127,16 @@ function App() {
           </ProtectedRoute>
         } 
       />
+
+      {/* Daily Attendance Admin - Principal only */}
+      <Route 
+        path="/daily-attendance-admin" 
+        element={
+          <ProtectedRoute requiredRole="principal">
+            <DailyAttendanceAdmin />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* Student Management - Principal and Staff */}
       <Route 
@@ -162,6 +174,16 @@ function App() {
         element={
           <ProtectedRoute requiredRole="staff">
             <ExamDetails />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Daily Attendance - Principal and Staff */}
+      <Route 
+        path="/daily-attendance" 
+        element={
+          <ProtectedRoute requiredRole="staff">
+            <DailyAttendance />
           </ProtectedRoute>
         } 
       />
