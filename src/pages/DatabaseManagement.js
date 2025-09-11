@@ -243,7 +243,7 @@ const DatabaseManagement = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                     >
-                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                      {showPassword ? '👁️' : '⏜'}
                     </button>
                   </div>
                 </div>
@@ -270,7 +270,7 @@ const DatabaseManagement = () => {
               <div className="mt-6 text-center">
                 <button
                   onClick={() => navigate('/')}
-                  className="text-gray-400 hover:text-white text-sm transition-colors duration-200"
+                  className="text-white hover:text-white text-sm transition-colors duration-200"
                 >
                   ← Back to Home
                 </button>
