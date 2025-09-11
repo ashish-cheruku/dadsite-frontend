@@ -131,11 +131,6 @@ const Dashboard = () => {
                     Subject Marks Config
                   </button>
                 </Link>
-                <Link to="/daily-attendance-admin" className="block w-full">
-                  <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
-                    Daily Attendance Admin
-                  </button>
-                </Link>
               </div>
             </div>
             
@@ -180,7 +175,7 @@ const Dashboard = () => {
               <h3 className="text-xl font-semibold mb-4 text-white">Staff Dashboard</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-[#362222] p-6 rounded-lg hover:bg-[#423F3E] transition duration-200 ease-in-out">
                 <Link to="/student-management" className="text-white block h-full">
                   <h3 className="text-xl font-semibold mb-2">Student Management</h3>
@@ -197,16 +192,6 @@ const Dashboard = () => {
                   <p className="text-gray-300 mb-4">Record attendance and identify students with low attendance</p>
                   <span className="text-white flex items-center mt-auto">
                     Record Attendance <span className="ml-2">→</span>
-                  </span>
-                </Link>
-              </div>
-              
-              <div className="bg-[#362222] p-6 rounded-lg hover:bg-[#423F3E] transition duration-200 ease-in-out">
-                <Link to="/daily-attendance" className="text-white block h-full">
-                  <h3 className="text-xl font-semibold mb-2">Daily Attendance</h3>
-                  <p className="text-gray-300 mb-4">Mark your daily attendance and class attendance</p>
-                  <span className="text-white flex items-center mt-auto">
-                    Mark Attendance <span className="ml-2">→</span>
                   </span>
                 </Link>
               </div>
