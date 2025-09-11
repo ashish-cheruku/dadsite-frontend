@@ -241,7 +241,7 @@ const DatabaseManagement = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black hover:text-white"
                     >
                       {showPassword ? '👁️' : '⏜'}
                     </button>
