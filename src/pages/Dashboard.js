@@ -131,6 +131,11 @@ const Dashboard = () => {
                     Subject Marks Config
                   </button>
                 </Link>
+                <Link to="/image-management" className="block w-full">
+                  <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
+                    Image Management
+                  </button>
+                </Link>
               </div>
             </div>
             

@@ -18,6 +18,7 @@ import SubjectMarksConfig from './pages/SubjectMarksConfig';
 import DatabaseManagement from './pages/DatabaseManagement';
 import Announcements from './pages/Announcements';
 import PermissionsManagement from './pages/PermissionsManagement';
+import ImageManagement from './pages/ImageManagement';
 import Academic from './pages/Academic';
 import Contact from './pages/Contact';
 import Developer from './pages/Developer';
@@ -122,6 +123,16 @@ function App() {
         element={
           <ProtectedRoute requiredRole="principal">
             <DatabaseManagement />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Image Management - Principal only */}
+      <Route 
+        path="/image-management" 
+        element={
+          <ProtectedRoute requiredRole="principal">
+            <ImageManagement />
           </ProtectedRoute>
         } 
       />

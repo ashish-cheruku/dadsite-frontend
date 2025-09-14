@@ -719,4 +719,62 @@ export const attendanceService = {
   }
 };
 
+// Image management service (Principal only)
+export const imageService = {
+  // Upload an image
+  uploadImage: async (file, category = 'general', description = null) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category', category);
+      if (description) {
+        formData.append('description', description);
+      }
+      
+      const response = await api.post('/images/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Get all images
+  getAllImages: async (category = null) => {
+    try {
+      let url = '/images/list';
+      if (category) {
+        url += `?category=${category}`;
+      }
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Delete an image
+  deleteImage: async (publicId) => {
+    try {
+      const response = await api.delete(`/images/${publicId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+  
+  // Get image categories
+  getCategories: async () => {
+    try {
+      const response = await api.get('/images/categories');
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  }
+};
+
 export default api; 
