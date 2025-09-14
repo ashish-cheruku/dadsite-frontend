@@ -45,9 +45,18 @@ const ImageManagement = () => {
 
   const fetchImages = async () => {
     try {
+      console.log('Fetching images for category:', selectedCategory || 'all');
+      
+      // Add a small delay to ensure backend has processed the delete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const response = await imageService.getAllImages(selectedCategory || null);
+      console.log('Fetched images response:', response);
+      
       setImages(response.images || []);
+      console.log('Updated images state with', (response.images || []).length, 'images');
     } catch (err) {
+      console.error('Error fetching images:', err);
       setError('Failed to load images: ' + (err.detail || err.message || 'Unknown error'));
     }
   };
@@ -118,10 +127,26 @@ const ImageManagement = () => {
     }
 
     try {
-      await imageService.deleteImage(publicId);
+      console.log('Deleting image with publicId:', publicId);
+      
+      // Clear any previous messages
+      setError('');
+      setSuccess('');
+      
+      const result = await imageService.deleteImage(publicId);
+      console.log('Delete result:', result);
+      
       setSuccess('Image deleted successfully!');
+      
+      // Force refresh the images list
+      console.log('Refreshing image list...');
       await fetchImages();
+      
+      // Also clear success message after a delay
+      setTimeout(() => setSuccess(''), 3000);
+      
     } catch (err) {
+      console.error('Delete error:', err);
       setError('Failed to delete image: ' + (err.detail || err.message || 'Unknown error'));
     }
   };

@@ -746,9 +746,19 @@ export const imageService = {
   getAllImages: async (category = null) => {
     try {
       let url = '/images/list';
+      const params = [];
+      
       if (category) {
-        url += `?category=${category}`;
+        params.push(`category=${category}`);
       }
+      
+      // Add cache busting parameter
+      params.push(`_t=${Date.now()}`);
+      
+      if (params.length > 0) {
+        url += `?${params.join('&')}`;
+      }
+      
       const response = await api.get(url);
       return response.data;
     } catch (error) {
