@@ -138,9 +138,17 @@ const ImageManagement = () => {
       
       setSuccess('Image deleted successfully!');
       
-      // Force refresh the images list
-      console.log('Refreshing image list...');
-      await fetchImages();
+      // IMMEDIATE UI UPDATE: Remove the image from the current state
+      // This provides instant feedback while we wait for the backend
+      setImages(prevImages => prevImages.filter(img => img.public_id !== publicId));
+      console.log('Immediately removed image from UI');
+      
+      // Force refresh the images list after a longer delay to handle Cloudinary caching
+      console.log('Scheduling image list refresh...');
+      setTimeout(async () => {
+        console.log('Refreshing image list after delay...');
+        await fetchImages();
+      }, 2000); // 2 second delay to allow Cloudinary to update
       
       // Also clear success message after a delay
       setTimeout(() => setSuccess(''), 3000);
