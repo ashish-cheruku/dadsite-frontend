@@ -1,25 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { imageService } from '../services/api';
 
 const Gallery = () => {
-  // All gallery images
-  const galleryImages = [
-    { id: 1, src: '/images/img1.png', alt: 'Campus 1' },
-    { id: 2, src: '/images/img2.png', alt: 'Campus 2' },
-    { id: 3, src: '/images/img3.png', alt: 'Campus 3' },
-    { id: 4, src: '/images/img4.png', alt: 'Campus 4' },
-    { id: 5, src: '/images/img5.png', alt: 'Campus 5' },
-    { id: 6, src: '/images/img6.png', alt: 'Campus 6' },
-    { id: 7, src: '/images/img7.png', alt: 'Campus 7' },
-    { id: 8, src: '/images/img8.png', alt: 'Campus 8' },
-    { id: 9, src: '/images/img9.png', alt: 'Campus 9' },
-    { id: 10, src: '/images/img10.png', alt: 'Campus 10' },
-    { id: 11, src: '/images/img11.png', alt: 'Campus 11' }
-  ];
+  // State for images and loading
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // State for modal
   const [selectedImage, setSelectedImage] = useState(null);
+
+  // Available categories for filtering
+  const categories = [
+    { value: 'all', label: 'All Images' },
+    { value: 'general', label: 'General' },
+    { value: 'events', label: 'Events' },
+    { value: 'facilities', label: 'Facilities' },
+    { value: 'academic', label: 'Academic' },
+    { value: 'sports', label: 'Sports' },
+    { value: 'gallery', label: 'Gallery' }
+  ];
+
+  // Fetch images from API
+  useEffect(() => {
+    fetchGalleryImages();
+  }, [selectedCategory]);
+
+  const fetchGalleryImages = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      console.log('Fetching gallery images for category:', selectedCategory);
+      
+      const response = await imageService.getGalleryImages(
+        selectedCategory === 'all' ? null : selectedCategory,
+        50
+      );
+      
+      console.log('Gallery API response:', response);
+      
+      // Transform API response to match component expectations
+      const transformedImages = response.images.map((img, index) => ({
+        id: img.id || index + 1,
+        src: img.url,
+        alt: img.alt || `Campus Image ${index + 1}`,
+        category: img.category,
+        width: img.width,
+        height: img.height
+      }));
+      
+      setGalleryImages(transformedImages);
+      console.log('Transformed gallery images:', transformedImages);
+      
+    } catch (err) {
+      console.error('Error fetching gallery images:', err);
+      setError('Failed to load gallery images');
+      // Fallback to empty array
+      setGalleryImages([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openModal = (image) => {
     setSelectedImage(image);
@@ -59,11 +104,67 @@ const Gallery = () => {
             </p>
           </div>
         </div>
+
+        {/* Category Filter */}
+        <div className="max-w-screen-xl mx-auto px-4 py-6">
+          <div className="flex flex-wrap justify-center gap-2">
+            {categories.map((category) => (
+              <button
+                key={category.value}
+                onClick={() => setSelectedCategory(category.value)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedCategory === category.value
+                    ? 'bg-[#423F3E] text-white'
+                    : 'bg-[#2B2B2B] text-gray-300 hover:bg-[#362222]'
+                }`}
+              >
+                {category.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="max-w-screen-xl mx-auto px-4 py-4">
+            <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-center">
+              <p className="text-red-400">{error}</p>
+              <button
+                onClick={fetchGalleryImages}
+                className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="max-w-screen-xl mx-auto px-4 py-12">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+              <p className="text-gray-300 mt-4">Loading gallery images...</p>
+            </div>
+          </div>
+        )}
         
         {/* Gallery grid */}
-        <div className="max-w-screen-xl mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {galleryImages.map((image) => (
+        {!loading && (
+          <div className="max-w-screen-xl mx-auto px-4 py-6">
+            {galleryImages.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📷</div>
+                <h3 className="text-xl font-semibold text-white mb-2">No Images Found</h3>
+                <p className="text-gray-400">
+                  {selectedCategory === 'all' 
+                    ? 'No images have been uploaded yet.' 
+                    : `No images found in the ${categories.find(c => c.value === selectedCategory)?.label} category.`}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {galleryImages.map((image) => (
               <div 
                 key={image.id} 
                 className="group relative rounded-lg overflow-hidden bg-[#2B2B2B] border border-[#423F3E] shadow-md cursor-pointer"
@@ -76,6 +177,18 @@ const Gallery = () => {
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>
+
+
+
+                {/* Category badge - show when "All Images" is selected */}
+                {selectedCategory === 'all' && image.category && (
+                  <div className="absolute top-2 left-2">
+                    <span className="bg-[#423F3E] text-white text-xs px-2 py-1 rounded-full">
+                      {categories.find(c => c.value === image.category)?.label || image.category}
+                    </span>
+                  </div>
+                )}
+                
                 <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-opacity duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <div className="bg-[#2B2B2B] rounded-full p-3">
                     <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -85,22 +198,27 @@ const Gallery = () => {
                 </div>
               </div>
             ))}
+              </div>
+            )}
           </div>
-        </div>
+        )}
         
         {/* Image viewing features */}
-        <div className="max-w-screen-xl mx-auto px-4 py-6 pb-12">
-          <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-6 text-center">
-            <h2 className="text-xl font-bold mb-4 text-white">GJC Vemulawada Campus</h2>
-            <p className="text-gray-300 mb-6">
-              Our campus provides an ideal environment for academic excellence and extracurricular activities.
-              With modern facilities, laboratories, and recreational spaces, students experience a balanced educational journey.
-            </p>
-            <p className="text-gray-400 text-sm">
-              Click on any image above to view it in full size
-            </p>
+        {!loading && galleryImages.length > 0 && (
+          <div className="max-w-screen-xl mx-auto px-4 py-6 pb-12">
+            <div className="bg-[#2B2B2B] rounded-lg shadow-md border border-[#423F3E] p-6 text-center">
+              <h2 className="text-xl font-bold mb-4 text-white">GJC Vemulawada Campus</h2>
+              <p className="text-gray-300 mb-6">
+                Our campus provides an ideal environment for academic excellence and extracurricular activities.
+                With modern facilities, laboratories, and recreational spaces, students experience a balanced educational journey.
+              </p>
+              <p className="text-gray-400 text-sm">
+                Click on any image above to view it in full size • Showing {galleryImages.length} images
+                {selectedCategory !== 'all' && ` in ${categories.find(c => c.value === selectedCategory)?.label} category`}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         
         {/* Image Modal */}
         {selectedImage && (

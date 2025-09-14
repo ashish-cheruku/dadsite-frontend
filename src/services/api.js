@@ -786,6 +786,30 @@ export const imageService = {
     } catch (error) {
       throw error.response ? error.response.data : { detail: 'Network error' };
     }
+  },
+
+  // Get gallery images (public endpoint - no auth required)
+  getGalleryImages: async (category = null, limit = 50) => {
+    try {
+      const params = {};
+      if (category && category !== 'all') {
+        params.category = category;
+      }
+      if (limit) {
+        params.limit = limit;
+      }
+      
+      const response = await api.get('/images/gallery', { params });
+      return response.data;
+    } catch (error) {
+      // For public endpoint, return empty result instead of throwing error
+      console.error('Gallery API error:', error);
+      return {
+        message: 'No images available',
+        images: [],
+        total_count: 0
+      };
+    }
   }
 };
 
