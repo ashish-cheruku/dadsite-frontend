@@ -16,6 +16,7 @@ const ImageManagement = () => {
   const [uploadCategory, setUploadCategory] = useState('general');
   const [description, setDescription] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [deletedImages, setDeletedImages] = useState(new Set()); // Track deleted images
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,8 +54,11 @@ const ImageManagement = () => {
       const response = await imageService.getAllImages(selectedCategory || null);
       console.log('Fetched images response:', response);
       
-      setImages(response.images || []);
-      console.log('Updated images state with', (response.images || []).length, 'images');
+      // Filter out any images that have been deleted (to handle caching issues)
+      const filteredImages = (response.images || []).filter(img => !deletedImages.has(img.public_id));
+      
+      setImages(filteredImages);
+      console.log('Updated images state with', filteredImages.length, 'images (filtered out', (response.images || []).length - filteredImages.length, 'deleted images)');
     } catch (err) {
       console.error('Error fetching images:', err);
       setError('Failed to load images: ' + (err.detail || err.message || 'Unknown error'));
@@ -138,16 +142,31 @@ const ImageManagement = () => {
       
       setSuccess('Image deleted successfully!');
       
+      // Add to deleted images set to prevent it from showing again
+      setDeletedImages(prev => new Set([...prev, publicId]));
+      
       // IMMEDIATE UI UPDATE: Remove the image from the current state
       // This provides instant feedback while we wait for the backend
       setImages(prevImages => prevImages.filter(img => img.public_id !== publicId));
-      console.log('Immediately removed image from UI');
+      console.log('Immediately removed image from UI and added to deleted set');
       
       // Force refresh the images list after a longer delay to handle Cloudinary caching
       console.log('Scheduling image list refresh...');
       setTimeout(async () => {
         console.log('Refreshing image list after delay...');
-        await fetchImages();
+        const refreshResult = await fetchImages();
+        
+        // If the refresh still shows the deleted image, filter it out again
+        // This handles persistent Cloudinary caching issues
+        setTimeout(() => {
+          setImages(prevImages => {
+            const filteredImages = prevImages.filter(img => img.public_id !== publicId);
+            if (filteredImages.length !== prevImages.length) {
+              console.log('Removed persistent cached image from UI after refresh');
+            }
+            return filteredImages;
+          });
+        }, 100);
       }, 2000); // 2 second delay to allow Cloudinary to update
       
       // Also clear success message after a delay
