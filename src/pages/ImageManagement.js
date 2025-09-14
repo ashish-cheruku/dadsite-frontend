@@ -246,7 +246,7 @@ const ImageManagement = () => {
                     type="file"
                     accept="image/*"
                     onChange={handleFileSelect}
-                    className="w-full p-3 bg-[#362222] border border-[#423F3E] rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#423F3E] file:text-white hover:file:bg-[#4A4747]"
+                    className="w-full p-3 bg-[#362222] border border-[#423F3E] rounded-lg text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#423F3E] file:text-white file:cursor-pointer hover:file:bg-[#4A4747] hover:bg-[#4A4747] transition-colors"
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Supported formats: JPG, PNG, GIF, WebP. Max size: 10MB
