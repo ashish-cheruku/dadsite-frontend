@@ -538,7 +538,7 @@ export const studentService = {
       });
       
       const query = params.toString() ? `?${params.toString()}` : '';
-      const response = await api.get(`/students${query}`);
+      const response = await api.get(`/students/${query}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : { detail: 'Network error' };
