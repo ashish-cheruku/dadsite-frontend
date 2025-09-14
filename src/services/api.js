@@ -759,7 +759,9 @@ export const imageService = {
   // Delete an image
   deleteImage: async (publicId) => {
     try {
-      const response = await api.delete(`/images/${publicId}`);
+      // URL encode the public_id to handle special characters and slashes
+      const encodedPublicId = encodeURIComponent(publicId);
+      const response = await api.delete(`/images/${encodedPublicId}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : { detail: 'Network error' };
