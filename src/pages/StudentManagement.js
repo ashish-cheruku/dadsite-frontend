@@ -8,7 +8,24 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ErrorDisplay, setSafeError } from '../utils/errorHandler';
 import { Helmet } from 'react-helmet';
-import Chart from 'chart.js/auto';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -513,7 +530,7 @@ const StudentManagement = () => {
       canvas.height = 150;
       const ctx = canvas.getContext('2d');
 
-      new Chart(ctx, {
+      new ChartJS(ctx, {
         type: 'bar',
         data: {
           labels: labels,
