@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { authService } from '../services/api';
+import { authService, attendanceTaskService } from '../services/api';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import Navbar from '../components/Navbar';
 
 const Dashboard = () => {
@@ -10,6 +12,15 @@ const Dashboard = () => {
   const [staffData, setStaffData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
+  // Staff attendance task states
+  const [myTasks, setMyTasks] = useState([]);
+  const [completionForms, setCompletionForms] = useState({});
+  
+  // Date filter for completed tasks
+  const [completedTasksDate, setCompletedTasksDate] = useState('');
+  
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,8 +41,12 @@ const Dashboard = () => {
         }
         
         if (currentPath.includes('staff') || userData.role === 'staff') {
-          const staffDashboardData = await authService.getStaffDashboard();
+          const [staffDashboardData, myTasksData] = await Promise.all([
+            authService.getStaffDashboard(),
+            attendanceTaskService.getMyTasks()
+          ]);
           setStaffData(staffDashboardData);
+          setMyTasks(myTasksData);
         }
       } catch (err) {
         setError('Failed to fetch user data');
@@ -48,6 +63,59 @@ const Dashboard = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userRole');
     window.location.href = '/';
+  };
+
+  const handleCompleteTask = async (taskId) => {
+    const formData = completionForms[taskId];
+    if (!formData?.students_present) {
+      setError('Please enter the number of students present');
+      return;
+    }
+
+    try {
+      await attendanceTaskService.completeTask(taskId, {
+        students_present: parseInt(formData.students_present),
+        completion_notes: formData.completion_notes || ''
+      });
+      
+      setSuccess('Attendance task completed successfully!');
+      
+      // Clear the form
+      setCompletionForms(prev => {
+        const updated = { ...prev };
+        delete updated[taskId];
+        return updated;
+      });
+      
+      // Refresh tasks
+      const myTasksData = await attendanceTaskService.getMyTasks();
+      setMyTasks(myTasksData);
+    } catch (err) {
+      setError('Failed to complete task: ' + (err.detail || err.message));
+    }
+  };
+
+  const updateCompletionForm = (taskId, field, value) => {
+    setCompletionForms(prev => ({
+      ...prev,
+      [taskId]: {
+        ...prev[taskId],
+        [field]: value
+      }
+    }));
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'bg-green-600';
+      case 'pending': return 'bg-yellow-600';
+      case 'overdue': return 'bg-red-600';
+      default: return 'bg-gray-600';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString();
   };
 
   if (loading) {
@@ -136,6 +204,11 @@ const Dashboard = () => {
                     Image Management
                   </button>
                 </Link>
+                <Link to="/task-management" className="block w-full">
+                  <button className="w-full py-3 px-4 bg-[#362222] hover:bg-[#423F3E] text-white rounded-md transition-colors duration-300">
+                    Attendance Task Allotment
+                  </button>
+                </Link>
               </div>
             </div>
             
@@ -180,6 +253,242 @@ const Dashboard = () => {
               <h3 className="text-xl font-semibold mb-4 text-white">Staff Dashboard</h3>
             </div>
             
+            {/* Success/Error Messages */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-900/50 border border-red-600 rounded-lg">
+                <p className="text-white font-medium">{error}</p>
+                <Button 
+                  onClick={() => setError('')} 
+                  className="mt-2 text-sm bg-red-700 hover:bg-red-800 text-white border-red-600"
+                  variant="outline"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-6 p-4 bg-green-900/50 border border-green-600 rounded-lg">
+                <p className="text-white font-medium">{success}</p>
+                <Button 
+                  onClick={() => setSuccess('')} 
+                  className="mt-2 text-sm bg-green-700 hover:bg-green-800 text-white border-green-600"
+                  variant="outline"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            )}
+
+            {/* Pending Tasks Section */}
+            {myTasks && myTasks.filter(task => task.status === 'pending').length > 0 && (
+              <div className="bg-[#2B2B2B] rounded-lg border border-[#423F3E] p-6 mb-6">
+                <h3 className="text-xl font-semibold text-white mb-4">
+                  Pending Tasks
+                  <span className="ml-2 text-sm bg-yellow-600 px-2 py-1 rounded-full">
+                    {myTasks.filter(task => task.status === 'pending').length}
+                  </span>
+                </h3>
+                
+                <div className="space-y-4">
+                  {myTasks.filter(task => task.status === 'pending').map(task => (
+                    <div key={task.id} className="bg-[#362222] p-4 rounded-lg">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="text-white font-medium">
+                            Mark Attendance: {task.branch} {task.medium} {task.year.replace('_', ' ')}
+                          </h4>
+                          <p className="text-gray-400 text-sm">
+                            Target Date: {formatDate(task.target_date)} | 
+                            Assigned by: {task.assigned_by}
+                          </p>
+                          {task.total_students && (
+                            <p className="text-gray-400 text-sm">
+                              Total Students in Class: {task.total_students}
+                            </p>
+                          )}
+                        </div>
+                        <span className={`px-2 py-1 text-xs rounded-full text-white ${getStatusColor(task.status)}`}>
+                          {task.status}
+                        </span>
+                      </div>
+                      
+                      {task.status === 'pending' && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`students_${task.id}`} className="text-white">
+                                Students Present * {task.total_students ? `(Max: ${task.total_students})` : ''}
+                              </Label>
+                              <Input
+                                id={`students_${task.id}`}
+                                type="number"
+                                min="0"
+                                max={task.total_students || undefined}
+                                value={completionForms[task.id]?.students_present || ''}
+                                onChange={(e) => updateCompletionForm(task.id, 'students_present', e.target.value)}
+                                className="bg-[#423F3E] border-[#423F3E] text-white"
+                                placeholder={task.total_students ? `Enter number (0-${task.total_students})` : 'Enter number of students present'}
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor={`notes_${task.id}`} className="text-white">
+                                Notes (Optional)
+                              </Label>
+                              <Input
+                                id={`notes_${task.id}`}
+                                value={completionForms[task.id]?.completion_notes || ''}
+                                onChange={(e) => updateCompletionForm(task.id, 'completion_notes', e.target.value)}
+                                className="bg-[#423F3E] border-[#423F3E] text-white"
+                                placeholder="Any additional notes"
+                              />
+                            </div>
+                          </div>
+                          
+                          <Button
+                            onClick={() => handleCompleteTask(task.id)}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            disabled={!completionForms[task.id]?.students_present}
+                          >
+                            Mark Attendance Complete
+                          </Button>
+                        </div>
+                      )}
+                      
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Completed Tasks Section */}
+            {myTasks && myTasks.filter(task => task.status === 'completed').length > 0 && (
+              <div className="bg-[#2B2B2B] rounded-lg border border-[#423F3E] p-6 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-white mb-4 sm:mb-0">
+                    Recent Completions
+                    <span className="ml-2 text-sm bg-green-600 px-2 py-1 rounded-full">
+                      {(() => {
+                        const filteredCompletedTasks = myTasks.filter(task => {
+                          if (task.status !== 'completed') return false;
+                          if (!completedTasksDate) return true; // Show all if no date selected
+                          
+                          // Get the completion date in YYYY-MM-DD format
+                          let completionDateStr;
+                          if (task.completed_at) {
+                            completionDateStr = new Date(task.completed_at).toISOString().split('T')[0];
+                          } else {
+                            return false;
+                          }
+                          
+                          return completionDateStr === completedTasksDate;
+                        });
+                        return filteredCompletedTasks.length;
+                      })()}
+                    </span>
+                  </h3>
+                  <div className="flex items-center space-x-2">
+                    <label htmlFor="completed-tasks-date-filter" className="text-white text-sm font-medium">
+                      Filter by Date:
+                    </label>
+                    <input
+                      id="completed-tasks-date-filter"
+                      type="date"
+                      value={completedTasksDate}
+                      onChange={(e) => setCompletedTasksDate(e.target.value)}
+                      className="px-3 py-2 bg-[#423F3E] border border-[#5A5A5A] rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {completedTasksDate && (
+                      <button
+                        onClick={() => setCompletedTasksDate('')}
+                        className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {(() => {
+                  const filteredCompletedTasks = myTasks.filter(task => {
+                    if (task.status !== 'completed') return false;
+                    if (!completedTasksDate) return true; // Show all if no date selected
+                    
+                    // Get the completion date in YYYY-MM-DD format
+                    let completionDateStr;
+                    if (task.completed_at) {
+                      completionDateStr = new Date(task.completed_at).toISOString().split('T')[0];
+                    } else {
+                      return false;
+                    }
+                    
+                    return completionDateStr === completedTasksDate;
+                  });
+
+                  return filteredCompletedTasks.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400 text-lg mb-2">
+                        {completedTasksDate 
+                          ? `No tasks completed on ${new Date(completedTasksDate).toLocaleDateString()}`
+                          : 'No completed tasks found'
+                        }
+                      </p>
+                      <p className="text-gray-500 text-sm">
+                        {completedTasksDate 
+                          ? 'Try selecting a different date or clear the filter to see all completed tasks.'
+                          : 'Completed tasks will appear here once you finish your assignments.'
+                        }
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredCompletedTasks.slice(0, 6).map(task => (
+                    <div key={task.id} className="bg-[#1a3a1a] p-4 rounded-lg border border-green-800">
+                      <div className="mb-3">
+                        <h4 className="text-white font-medium text-sm">
+                          {task.branch} {task.medium} {task.year.replace('_', ' ')}
+                        </h4>
+                        <p className="text-gray-400 text-xs">
+                          {formatDate(task.target_date)}
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-1 text-xs text-gray-300">
+                        <p>✓ Completed {formatDate(task.completed_at)}</p>
+                        {task.total_students ? (
+                          <>
+                            <p>Present: {task.students_present} / {task.total_students}</p>
+                            <p className="font-medium text-green-400">
+                              {((task.students_present / task.total_students) * 100).toFixed(1)}% Attendance
+                            </p>
+                          </>
+                        ) : (
+                          <p>Present: {task.students_present || task.total_students_present}</p>
+                        )}
+                        {task.completion_notes && (
+                          <p className="text-gray-400 italic">"{task.completion_notes}"</p>
+                        )}
+                      </div>
+                    </div>
+                        ))}
+                      </div>
+                      
+                      {filteredCompletedTasks.length > 6 && (
+                        <div className="mt-4 text-center">
+                          <p className="text-gray-400 text-sm">
+                            Showing 6 of {filteredCompletedTasks.length} completed tasks
+                            {completedTasksDate && ` for ${new Date(completedTasksDate).toLocaleDateString()}`}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-[#362222] p-6 rounded-lg hover:bg-[#423F3E] transition duration-200 ease-in-out">
                 <Link to="/student-management" className="text-white block h-full">

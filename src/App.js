@@ -19,6 +19,8 @@ import DatabaseManagement from './pages/DatabaseManagement';
 import Announcements from './pages/Announcements';
 import PermissionsManagement from './pages/PermissionsManagement';
 import ImageManagement from './pages/ImageManagement';
+import TaskManagement from './pages/TaskManagement';
+import AttendanceReports from './pages/AttendanceReports';
 import Academic from './pages/Academic';
 import Contact from './pages/Contact';
 import Developer from './pages/Developer';
@@ -136,6 +138,24 @@ function App() {
           </ProtectedRoute>
         } 
       />
+
+      {/* Task Management - Principal only */}
+          <Route
+            path="/task-management"
+            element={
+              <ProtectedRoute requiredRole="principal">
+                <TaskManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/attendance-reports"
+            element={
+              <ProtectedRoute requiredRole="principal">
+                <AttendanceReports />
+              </ProtectedRoute>
+            }
+          />
       
       {/* Student Management - Principal and Staff */}
       <Route 

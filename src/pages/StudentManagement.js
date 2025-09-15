@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ErrorDisplay, setSafeError } from '../utils/errorHandler';
 import { Helmet } from 'react-helmet';
+import Chart from 'chart.js/auto';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -194,31 +195,50 @@ const StudentManagement = () => {
     }
   }, [currentAcademicYear, selectedMonth]);
 
-  // Fetch attendance for all months (for progress card)
+  // Fetch attendance for all months (for progress card) - Academic Year: June to May
   const fetchAllMonthsAttendance = async (studentId) => {
     try {
       const allAttendance = {};
       
-      // Use Promise.all to fetch all months concurrently instead of sequentially
-      console.log(`Fetching attendance for academic year: ${progressCardAcademicYear}`);
-      const requests = months.map(month => 
-        attendanceService.getStudentAttendance(
+      // Academic year months: June to May
+      const academicMonths = [
+        'june', 'july', 'august', 'september', 'october', 'november',
+        'december', 'january', 'february', 'march', 'april', 'may'
+      ];
+      
+      // Parse academic year (e.g., "2025-26" -> start year: 2025, end year: 2026)
+      const [startYear, endYear] = progressCardAcademicYear.split('-').map(y => 
+        y.length === 2 ? 2000 + parseInt(y) : parseInt(y)
+      );
+      
+      console.log(`Fetching attendance for academic year: ${progressCardAcademicYear} (${startYear}-${endYear})`);
+      
+      // Create requests for each academic month with correct year
+      const requests = academicMonths.map(month => {
+        // June to December belong to start year, January to May belong to end year
+        const isFirstHalf = ['june', 'july', 'august', 'september', 'october', 'november', 'december'].includes(month);
+        const yearForMonth = isFirstHalf ? startYear : endYear;
+        const academicYearForMonth = `${yearForMonth}-${(yearForMonth + 1).toString().slice(-2)}`;
+        
+        console.log(`Fetching ${month} from academic year: ${academicYearForMonth}`);
+        
+        return attendanceService.getStudentAttendance(
           studentId,
-          progressCardAcademicYear, // Use the selected academic year for the progress card
+          academicYearForMonth,
           month
         )
         .catch(error => {
-          console.error(`Error fetching attendance for ${month} (${progressCardAcademicYear}):`, error);
+          console.error(`Error fetching attendance for ${month} (${academicYearForMonth}):`, error);
           // Return default values on error
           return { working_days: 0, days_present: 0, attendance_percentage: 0 };
-        })
-      );
+        });
+      });
       
       // Wait for all requests to complete
       const results = await Promise.all(requests);
       
       // Map results to months
-      months.forEach((month, index) => {
+      academicMonths.forEach((month, index) => {
         allAttendance[month] = results[index];
       });
       
@@ -485,6 +505,80 @@ const StudentManagement = () => {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
+  // Helper function to create compact bar chart as image
+  const createBarChart = (labels, data, title, color = '#4F46E5') => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 150;
+      const ctx = canvas.getContext('2d');
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: title,
+            data: data,
+            backgroundColor: color,
+            borderColor: color,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            title: {
+              display: false // Remove title to save space
+            },
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: '#e5e7eb'
+              },
+              ticks: {
+                font: {
+                  size: 8
+                }
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                font: {
+                  size: 8
+                },
+                maxRotation: 45
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 5,
+              bottom: 5,
+              left: 5,
+              right: 5
+            }
+          }
+        }
+      });
+
+      // Convert canvas to image after a short delay to ensure rendering
+      setTimeout(() => {
+        const imageData = canvas.toDataURL('image/png');
+        resolve(imageData);
+      }, 100);
+    });
+  };
+
   // Export student data to Excel
   const exportToExcel = () => {
     // Only export if there are students
@@ -583,29 +677,31 @@ const StudentManagement = () => {
           allMonthsAttendance = {};
         }
 
-        // Simple logic: just include all months for any academic year
-        // Let the data availability determine what shows up
+        // Use academic year months (June to May) for attendance calculation
         const selectedAcademicYear = progressCardAcademicYear;
-        const monthsToInclude = months; // All 12 months
+        const academicMonthsForCalculation = [
+          'june', 'july', 'august', 'september', 'october', 'november',
+          'december', 'january', 'february', 'march', 'april', 'may'
+        ];
 
-        console.log('=== ATTENDANCE CALCULATION ===');
+        console.log('=== ATTENDANCE CALCULATION (ACADEMIC YEAR) ===');
         console.log('Selected academic year:', selectedAcademicYear);
-        console.log('Including all months:', monthsToInclude);
+        console.log('Including academic months (June-May):', academicMonthsForCalculation);
         console.log('All months attendance data:', allMonthsAttendance);
         console.log('=== END ===');
         
-        // Aggregate attendance from all included months
+        // Aggregate attendance from academic year months (June to May)
         let totalWorkingDays = 0;
         let totalDaysPresent = 0;
-        console.log('=== MONTH BY MONTH BREAKDOWN ===');
-        monthsToInclude.forEach(month => {
+        console.log('=== ACADEMIC YEAR MONTH BREAKDOWN ===');
+        academicMonthsForCalculation.forEach(month => {
           const monthData = allMonthsAttendance[month] || { working_days: 0, days_present: 0 };
           console.log(`${month}: working_days=${monthData.working_days || 0}, days_present=${monthData.days_present || 0}`);
           totalWorkingDays += monthData.working_days || 0;
           totalDaysPresent += monthData.days_present || 0;
         });
-        console.log(`Total: working_days=${totalWorkingDays}, days_present=${totalDaysPresent}`);
-        console.log('=== END MONTH BREAKDOWN ===');
+        console.log(`Academic Year Total: working_days=${totalWorkingDays}, days_present=${totalDaysPresent}`);
+        console.log('=== END ACADEMIC YEAR BREAKDOWN ===');
         
         const overallPercentage = totalWorkingDays > 0 ? ((totalDaysPresent / totalWorkingDays) * 100).toFixed(1) : "0.0";
 
@@ -709,7 +805,8 @@ const StudentManagement = () => {
         setPdfGenerationProgress('Creating PDF document...');
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
-        let y = 15;
+        const pageHeight = doc.internal.pageSize.getHeight();
+        let y = 10; // Start higher to save space
 
         // Get current date for the report
         const currentDate = new Date();
@@ -720,31 +817,31 @@ const StudentManagement = () => {
         });
 
 
-        // Header
-        doc.setFontSize(16);
+        // Compact Header
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Government Junior College, Vemulawada', pageWidth / 2, y, { align: 'center' });
-        y += 8;
-        doc.setFontSize(13);
+        y += 5;
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         doc.text('Student Performance Report', pageWidth / 2, y, { align: 'center' });
-        y += 7;
-        doc.setFontSize(11);
+        y += 4;
+        doc.setFontSize(9);
         doc.text(`Academic Year: ${progressCardAcademicYear}`, pageWidth / 2, y, { align: 'center' });
-        y += 7;
-        doc.setFontSize(5);
+        y += 3;
+        doc.setFontSize(7);
         doc.text(`Generated on: ${formattedDate}`, pageWidth / 2, y, { align: 'center' });
-        y += 7;
+        y += 4;
         doc.setDrawColor(54, 34, 34);
         doc.line(20, y, pageWidth - 20, y);
-        y += 4;
+        y += 3;
 
-        // Student Information Section
-        y += 4;
-        doc.setFontSize(12);
+        // Compact Student Information Section
+        y += 2;
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text('Student Information', 20, y);
-        y += 10;
+        y += 6;
         doc.setFont('helvetica', 'normal');
         const infoRows = [
           [
@@ -757,38 +854,38 @@ const StudentManagement = () => {
           ],     
           [
             { label: 'Group', value: studentDetails.group ? capitalize(studentDetails.group) : '' },
-            { label: 'Student Phone Number', value: studentDetails.student_phone || '' }
+            { label: 'Student Phone', value: studentDetails.student_phone || '' }
           ],
           [ 
             { label: 'Medium', value: studentDetails.medium ? capitalize(studentDetails.medium) : '' },
-            { label: 'Parent Phone Number', value: studentDetails.parent_phone || '' }
+            { label: 'Parent Phone', value: studentDetails.parent_phone || '' }
           ]
         ];
         infoRows.forEach(row => {
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(10);
+          doc.setFontSize(8);
           doc.text(row[0].label + ':', 20, y);
           doc.setFont('helvetica', 'normal');
-          doc.text(row[0].value, 55, y);
+          doc.text(row[0].value, 50, y);
           if (row[1].label) {
             doc.setFont('helvetica', 'bold');
             doc.text(row[1].label + ':', 110, y);
             doc.setFont('helvetica', 'normal');
-            doc.text(row[1].value, 155, y);
+            doc.text(row[1].value, 145, y);
           }
-          y += 6;
+          y += 4;
         });
-        y += 2;
+        y += 1;
         doc.setDrawColor(200, 200, 200);
         doc.line(20, y, pageWidth - 20, y);
-        y += 4;
+        y += 2;
 
-        // Exam Records Table
-        y += 4;
-        doc.setFontSize(12);
+        // Compact Exam Records Table
+        y += 2;
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text('Exam Records', 20, y);
-        y += 4;
+        y += 2;
         const examTableHead = [
           ['Exam', ...subjectFullNames, 'Total/Max', 'Percentage']
         ];
@@ -800,21 +897,20 @@ const StudentManagement = () => {
           headStyles: { fillColor: [54, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
           bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
           alternateRowStyles: { fillColor: [245, 245, 245] },
-          styles: { fontSize: 8, cellPadding: 2 },
+          styles: { fontSize: 6, cellPadding: 1 },
           margin: { left: 20, right: 20 },
           tableWidth: 'auto'
         });
-        y = doc.lastAutoTable.finalY + 6;
+        y = doc.lastAutoTable.finalY + 3;
         
-        // Attendance Summary
-        y += 4;
+        // Compact Attendance Summary
+        y += 2;
         doc.line(20, y, pageWidth - 20, y);
-        y += 4;
-        y += 4;
-        doc.setFontSize(12);
+        y += 2;
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text('Attendance Summary', 20, y);
-        y += 4;
+        y += 2;
         const attTableHead = [['Total Working Days', 'Total Days Present', 'Attendance Percentage']];
         const attTableBody = [[totalWorkingDays, totalDaysPresent, overallPercentage + '%']];
         autoTable(doc, {
@@ -824,14 +920,124 @@ const StudentManagement = () => {
           theme: 'grid',
           headStyles: { fillColor: [54, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
           bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-          styles: { fontSize: 8, cellPadding: 2 },
+          styles: { fontSize: 6, cellPadding: 1 },
           margin: { left: 20, right: 20 },
           tableWidth: 'auto'
         });
-        y = doc.lastAutoTable.finalY + 15;
+        y = doc.lastAutoTable.finalY + 3;
 
-        // Signature Section
-        doc.setFontSize(11);
+        // Generate Bar Graphs
+        setPdfGenerationProgress('Generating performance graphs...');
+        
+        // 1. Exam Marks Bar Graph
+        const examLabels = [];
+        const examMarks = [];
+        examTypes.forEach(typeObj => {
+          const exam = (studentExams.exams || []).find(e => {
+            const examType = (e.exam_type || '').toLowerCase().replace('-', '_');
+            const searchKey = typeObj.key.toLowerCase().replace('-', '_');
+            return examType === searchKey || 
+                   examType === searchKey.replace('_', '-') ||
+                   examType === typeObj.key.toLowerCase() ||
+                   (e.exam_type || '').toUpperCase() === typeObj.key;
+          });
+          
+          if (exam && exam.percentage !== undefined && exam.percentage !== null) {
+            examLabels.push(typeObj.label);
+            examMarks.push(exam.percentage);
+          }
+        });
+
+        // 2. Monthly Attendance Bar Graph (June to May)
+        const academicMonths = [
+          'june', 'july', 'august', 'september', 'october', 'november',
+          'december', 'january', 'february', 'march', 'april', 'may'
+        ];
+        const monthLabels = [];
+        const attendancePercentages = [];
+        
+        academicMonths.forEach(month => {
+          const monthData = allMonthsAttendance[month];
+          if (monthData && monthData.working_days > 0) {
+            monthLabels.push(month.charAt(0).toUpperCase() + month.slice(1));
+            const percentage = ((monthData.days_present / monthData.working_days) * 100);
+            attendancePercentages.push(percentage);
+          }
+        });
+
+        // Create smaller bar chart images
+        let examChartImage = null;
+        let attendanceChartImage = null;
+
+        if (examLabels.length > 0) {
+          examChartImage = await createBarChart(
+            examLabels, 
+            examMarks, 
+            'Exam Performance (%)', 
+            '#10B981'
+          );
+        }
+
+        if (monthLabels.length > 0) {
+          attendanceChartImage = await createBarChart(
+            monthLabels, 
+            attendancePercentages, 
+            'Monthly Attendance (%)', 
+            '#3B82F6'
+          );
+        }
+
+        // Add compact graphs to PDF side by side
+        if (examChartImage || attendanceChartImage) {
+          y += 3;
+          doc.setDrawColor(200, 200, 200);
+          doc.line(20, y, pageWidth - 20, y);
+          y += 3;
+
+          const chartWidth = 75;
+          const chartHeight = 30;
+
+          if (examChartImage && attendanceChartImage) {
+            // Both charts side by side
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Exam Performance', 20, y);
+            doc.text('Monthly Attendance', 105, y);
+            y += 3;
+            
+            doc.addImage(examChartImage, 'PNG', 20, y, chartWidth, chartHeight);
+            doc.addImage(attendanceChartImage, 'PNG', 105, y, chartWidth, chartHeight);
+            y += chartHeight + 5;
+          } else if (examChartImage) {
+            // Only exam chart
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Exam Performance Analysis', 20, y);
+            y += 3;
+            
+            doc.addImage(examChartImage, 'PNG', 20, y, chartWidth, chartHeight);
+            y += chartHeight + 5;
+          } else if (attendanceChartImage) {
+            // Only attendance chart
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Monthly Attendance Analysis', 20, y);
+            y += 3;
+            
+            doc.addImage(attendanceChartImage, 'PNG', 20, y, chartWidth, chartHeight);
+            y += chartHeight + 5;
+          }
+        }
+
+        // Compact Signature Section - ensure it fits at bottom
+        const remainingSpace = pageHeight - y - 20; // Leave 20 units margin from bottom
+        if (remainingSpace < 15) {
+          y = pageHeight - 25; // Position near bottom if space is tight
+        } else {
+          y += 5; // Add small gap if there's space
+        }
+        
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text('Parent Signature', 30, y);
         doc.text('Class Incharge', pageWidth / 2, y, { align: 'center' });

@@ -813,4 +813,95 @@ export const imageService = {
   }
 };
 
+// Attendance Task Management Service
+export const attendanceTaskService = {
+  // Get attendance task statistics (Principal only)
+  getStats: async () => {
+    try {
+      const response = await api.get('/attendance-tasks/stats');
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Assign attendance task to staff (Principal only)
+  assignTask: async (taskData) => {
+    try {
+      const response = await api.post('/attendance-tasks/assign', taskData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Get all attendance tasks (Principal only)
+  getAllTasks: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.status) params.append('status', filters.status);
+      if (filters.assigned_to) params.append('assigned_to', filters.assigned_to);
+      if (filters.branch) params.append('branch', filters.branch);
+      
+      const response = await api.get(`/attendance-tasks/all?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Get tasks assigned to current staff member
+  getMyTasks: async (status = null) => {
+    try {
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      
+      const response = await api.get(`/attendance-tasks/assigned-to-me?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Complete an attendance task (Staff only)
+  completeTask: async (taskId, completionData) => {
+    try {
+      const response = await api.post(`/attendance-tasks/${taskId}/complete`, completionData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Get attendance records (Principal only)
+  getAttendanceRecords: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.branch) params.append('branch', filters.branch);
+      if (filters.medium) params.append('medium', filters.medium);
+      if (filters.year) params.append('year', filters.year);
+      if (filters.start_date) params.append('start_date', filters.start_date);
+      if (filters.end_date) params.append('end_date', filters.end_date);
+      if (filters.assigned_to) params.append('assigned_to', filters.assigned_to);
+      
+      const response = await api.get(`/attendance-tasks/records?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  },
+
+  // Delete an attendance task (Principal only)
+  deleteTask: async (taskId) => {
+    try {
+      const response = await api.delete(`/attendance-tasks/${taskId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : { detail: 'Network error' };
+    }
+  }
+};
+
 export default api; 
