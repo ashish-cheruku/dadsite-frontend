@@ -214,51 +214,40 @@ const StudentManagement = () => {
     }
   }, [currentAcademicYear, selectedMonth]);
 
-  // Fetch attendance for all months (for progress card) - Academic Year: June to May
+  // Fetch attendance for all months (for progress card) - Calendar Year: January to December
   const fetchAllMonthsAttendance = async (studentId) => {
     try {
       const allAttendance = {};
       
-      // Academic year months: June to May
-      const academicMonths = [
-        'june', 'july', 'august', 'september', 'october', 'november',
-        'december', 'january', 'february', 'march', 'april', 'may'
+      // Calendar year months: January to December
+      const calendarMonths = [
+        'january', 'february', 'march', 'april', 'may', 'june', 
+        'july', 'august', 'september', 'october', 'november', 'december'
       ];
       
-      // Parse academic year (e.g., "2025-26" -> start year: 2025, end year: 2026)
-      const [startYear, endYear] = progressCardAcademicYear.split('-').map(y => 
-        y.length === 2 ? 2000 + parseInt(y) : parseInt(y)
-      );
+      console.log(`Fetching attendance for academic year: ${progressCardAcademicYear}`);
       
-      console.log(`Fetching attendance for academic year: ${progressCardAcademicYear} (${startYear}-${endYear})`);
-      
-      // Create requests for each academic month with correct year
-      const requests = academicMonths.map(month => {
-        // June to December belong to start year, January to May belong to end year
-        const isFirstHalf = ['june', 'july', 'august', 'september', 'october', 'november', 'december'].includes(month);
-        const yearForMonth = isFirstHalf ? startYear : endYear;
-        const academicYearForMonth = `${yearForMonth}-${(yearForMonth + 1).toString().slice(-2)}`;
-        
-        console.log(`Fetching ${month} from academic year: ${academicYearForMonth}`);
-        
-        return attendanceService.getStudentAttendance(
+      // Use Promise.all to fetch all months concurrently
+      const requests = calendarMonths.map(month => 
+        attendanceService.getStudentAttendance(
           studentId,
-          academicYearForMonth,
+          progressCardAcademicYear,
           month
         )
         .catch(error => {
-          console.error(`Error fetching attendance for ${month} (${academicYearForMonth}):`, error);
+          console.error(`Error fetching attendance for ${month} (${progressCardAcademicYear}):`, error);
           // Return default values on error
           return { working_days: 0, days_present: 0, attendance_percentage: 0 };
-        });
-      });
+        })
+      );
       
       // Wait for all requests to complete
       const results = await Promise.all(requests);
       
       // Map results to months
-      academicMonths.forEach((month, index) => {
+      calendarMonths.forEach((month, index) => {
         allAttendance[month] = results[index];
+        console.log(`FETCH DEBUG: ${month} (${progressCardAcademicYear}) ->`, results[index]);
       });
       
       return allAttendance;
@@ -696,31 +685,42 @@ const StudentManagement = () => {
           allMonthsAttendance = {};
         }
 
-        // Use academic year months (June to May) for attendance calculation
+        // Use calendar year months (January to December) for attendance calculation
         const selectedAcademicYear = progressCardAcademicYear;
-        const academicMonthsForCalculation = [
-          'june', 'july', 'august', 'september', 'october', 'november',
-          'december', 'january', 'february', 'march', 'april', 'may'
+        const calendarMonthsForCalculation = [
+          'january', 'february', 'march', 'april', 'may', 'june', 
+          'july', 'august', 'september', 'october', 'november', 'december'
         ];
 
-        console.log('=== ATTENDANCE CALCULATION (ACADEMIC YEAR) ===');
+        console.log('=== ATTENDANCE CALCULATION (CALENDAR YEAR) ===');
         console.log('Selected academic year:', selectedAcademicYear);
-        console.log('Including academic months (June-May):', academicMonthsForCalculation);
+        console.log('Including calendar months (Jan-Dec):', calendarMonthsForCalculation);
         console.log('All months attendance data:', allMonthsAttendance);
         console.log('=== END ===');
         
-        // Aggregate attendance from academic year months (June to May)
+        // Aggregate attendance from calendar year months (January to December)
         let totalWorkingDays = 0;
         let totalDaysPresent = 0;
-        console.log('=== ACADEMIC YEAR MONTH BREAKDOWN ===');
-        academicMonthsForCalculation.forEach(month => {
+        console.log('=== CALENDAR YEAR MONTH BREAKDOWN ===');
+        calendarMonthsForCalculation.forEach(month => {
           const monthData = allMonthsAttendance[month] || { working_days: 0, days_present: 0 };
-          console.log(`${month}: working_days=${monthData.working_days || 0}, days_present=${monthData.days_present || 0}`);
-          totalWorkingDays += monthData.working_days || 0;
-          totalDaysPresent += monthData.days_present || 0;
+          const workingDays = monthData.working_days || 0;
+          const daysPresent = monthData.days_present || 0;
+          
+          // Validate data - days present cannot exceed working days
+          const validDaysPresent = Math.min(daysPresent, workingDays);
+          
+          console.log(`${month}: working_days=${workingDays}, days_present=${daysPresent}, valid_days_present=${validDaysPresent}`);
+          
+          if (daysPresent > workingDays && workingDays > 0) {
+            console.warn(`WARNING: ${month} has more days present (${daysPresent}) than working days (${workingDays}). Using ${validDaysPresent} instead.`);
+          }
+          
+          totalWorkingDays += workingDays;
+          totalDaysPresent += validDaysPresent;
         });
-        console.log(`Academic Year Total: working_days=${totalWorkingDays}, days_present=${totalDaysPresent}`);
-        console.log('=== END ACADEMIC YEAR BREAKDOWN ===');
+        console.log(`Calendar Year Total: working_days=${totalWorkingDays}, days_present=${totalDaysPresent}`);
+        console.log('=== END CALENDAR YEAR BREAKDOWN ===');
         
         const overallPercentage = totalWorkingDays > 0 ? ((totalDaysPresent / totalWorkingDays) * 100).toFixed(1) : "0.0";
 
@@ -837,30 +837,29 @@ const StudentManagement = () => {
 
 
         // Compact Header
-        doc.setFontSize(14);
+        doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
         doc.text('Government Junior College, Vemulawada', pageWidth / 2, y, { align: 'center' });
         y += 5;
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text('Student Performance Report', pageWidth / 2, y, { align: 'center' });
         y += 4;
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.text(`Academic Year: ${progressCardAcademicYear}`, pageWidth / 2, y, { align: 'center' });
         y += 3;
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         doc.text(`Generated on: ${formattedDate}`, pageWidth / 2, y, { align: 'center' });
-        y += 4;
-        doc.setDrawColor(54, 34, 34);
-        doc.line(20, y, pageWidth - 20, y);
         y += 3;
+        doc.setDrawColor(54, 34, 34);
+        y += 2;
 
         // Compact Student Information Section
         y += 2;
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.text('Student Information', 20, y);
-        y += 6;
+        y += 5;
         doc.setFont('helvetica', 'normal');
         const infoRows = [
           [
@@ -882,7 +881,7 @@ const StudentManagement = () => {
         ];
         infoRows.forEach(row => {
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
+          doc.setFontSize(7);
           doc.text(row[0].label + ':', 20, y);
           doc.setFont('helvetica', 'normal');
           doc.text(row[0].value, 50, y);
@@ -896,12 +895,10 @@ const StudentManagement = () => {
         });
         y += 1;
         doc.setDrawColor(200, 200, 200);
-        doc.line(20, y, pageWidth - 20, y);
         y += 2;
 
         // Compact Exam Records Table
-        y += 2;
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.text('Exam Records', 20, y);
         y += 2;
@@ -916,17 +913,15 @@ const StudentManagement = () => {
           headStyles: { fillColor: [54, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
           bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
           alternateRowStyles: { fillColor: [245, 245, 245] },
-          styles: { fontSize: 6, cellPadding: 1 },
+          styles: { fontSize: 5, cellPadding: 1 },
           margin: { left: 20, right: 20 },
           tableWidth: 'auto'
         });
-        y = doc.lastAutoTable.finalY + 3;
+        y = doc.lastAutoTable.finalY + 2;
         
         // Compact Attendance Summary
         y += 2;
-        doc.line(20, y, pageWidth - 20, y);
-        y += 2;
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.text('Attendance Summary', 20, y);
         y += 2;
@@ -939,11 +934,11 @@ const StudentManagement = () => {
           theme: 'grid',
           headStyles: { fillColor: [54, 34, 34], textColor: [255, 255, 255], fontStyle: 'bold' },
           bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-          styles: { fontSize: 6, cellPadding: 1 },
+          styles: { fontSize: 5, cellPadding: 1 },
           margin: { left: 20, right: 20 },
           tableWidth: 'auto'
         });
-        y = doc.lastAutoTable.finalY + 3;
+        y = doc.lastAutoTable.finalY + 1;
 
         // Generate Bar Graphs
         setPdfGenerationProgress('Generating performance graphs...');
@@ -967,20 +962,38 @@ const StudentManagement = () => {
           }
         });
 
-        // 2. Monthly Attendance Bar Graph (June to May)
-        const academicMonths = [
-          'june', 'july', 'august', 'september', 'october', 'november',
-          'december', 'january', 'february', 'march', 'april', 'may'
+        // 2. Monthly Attendance Bar Graph (January to December) - Show all months
+        const calendarMonths = [
+          'january', 'february', 'march', 'april', 'may', 'june', 
+          'july', 'august', 'september', 'october', 'november', 'december'
         ];
         const monthLabels = [];
         const attendancePercentages = [];
         
-        academicMonths.forEach(month => {
+        // Show all 12 months, with 0% for months without data
+        calendarMonths.forEach(month => {
           const monthData = allMonthsAttendance[month];
+          monthLabels.push(month.charAt(0).toUpperCase() + month.slice(1));
+          
           if (monthData && monthData.working_days > 0) {
-            monthLabels.push(month.charAt(0).toUpperCase() + month.slice(1));
-            const percentage = ((monthData.days_present / monthData.working_days) * 100);
+            const workingDays = monthData.working_days;
+            const daysPresent = monthData.days_present;
+            
+            // Validate data - days present cannot exceed working days
+            const validDaysPresent = Math.min(daysPresent, workingDays);
+            const percentage = ((validDaysPresent / workingDays) * 100);
+            
+            console.log(`DEBUG: ${month} - working_days: ${workingDays}, days_present: ${daysPresent}, valid_days_present: ${validDaysPresent}, percentage: ${percentage.toFixed(1)}%`);
+            
+            if (daysPresent > workingDays) {
+              console.warn(`WARNING: ${month} has invalid data - days present (${daysPresent}) > working days (${workingDays}). Using corrected percentage.`);
+            }
+            
             attendancePercentages.push(percentage);
+          } else {
+            console.log(`DEBUG: ${month} - No data or working_days = 0, showing 0%`);
+            // Show 0% for months without data
+            attendancePercentages.push(0);
           }
         });
 
@@ -1001,7 +1014,7 @@ const StudentManagement = () => {
           attendanceChartImage = await createBarChart(
             monthLabels, 
             attendancePercentages, 
-            'Monthly Attendance (%)', 
+            'Monthly Attendance Percentage', 
             '#3B82F6'
           );
         }
@@ -1010,18 +1023,17 @@ const StudentManagement = () => {
         if (examChartImage || attendanceChartImage) {
           y += 3;
           doc.setDrawColor(200, 200, 200);
-          doc.line(20, y, pageWidth - 20, y);
-          y += 3;
+          y += 2;
 
           const chartWidth = 75;
           const chartHeight = 30;
 
           if (examChartImage && attendanceChartImage) {
             // Both charts side by side
-            doc.setFontSize(8);
+            doc.setFontSize(7);
             doc.setFont('helvetica', 'bold');
             doc.text('Exam Performance', 20, y);
-            doc.text('Monthly Attendance', 105, y);
+            doc.text('Monthly Attendance %', 105, y);
             y += 3;
             
             doc.addImage(examChartImage, 'PNG', 20, y, chartWidth, chartHeight);
@@ -1029,7 +1041,7 @@ const StudentManagement = () => {
             y += chartHeight + 5;
           } else if (examChartImage) {
             // Only exam chart
-            doc.setFontSize(8);
+            doc.setFontSize(7);
             doc.setFont('helvetica', 'bold');
             doc.text('Exam Performance Analysis', 20, y);
             y += 3;
@@ -1038,9 +1050,9 @@ const StudentManagement = () => {
             y += chartHeight + 5;
           } else if (attendanceChartImage) {
             // Only attendance chart
-            doc.setFontSize(8);
+            doc.setFontSize(7);
             doc.setFont('helvetica', 'bold');
-            doc.text('Monthly Attendance Analysis', 20, y);
+            doc.text('Monthly Attendance Percentage', 20, y);
             y += 3;
             
             doc.addImage(attendanceChartImage, 'PNG', 20, y, chartWidth, chartHeight);
@@ -1050,13 +1062,13 @@ const StudentManagement = () => {
 
         // Compact Signature Section - ensure it fits at bottom
         const remainingSpace = pageHeight - y - 20; // Leave 20 units margin from bottom
-        if (remainingSpace < 15) {
-          y = pageHeight - 25; // Position near bottom if space is tight
+        if (remainingSpace < 12) {
+          y = pageHeight - 22; // Position near bottom if space is tight
         } else {
-          y += 5; // Add small gap if there's space
+          y += 3; // Add small gap if there's space
         }
         
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.text('Parent Signature', 30, y);
         doc.text('Class Incharge', pageWidth / 2, y, { align: 'center' });
